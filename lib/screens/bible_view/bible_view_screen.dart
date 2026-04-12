@@ -24,6 +24,8 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
   late AnimationController _bounceController;
   late AnimationController _rotationController;
   late AnimationController _fillController;
+  late AnimationController _introController;
+  bool _introPlayed = false;
   double _rotationAngle = 0.0;
   int _rotationDirection = 0; // -1: left, 0: stop, 1: right
   final TransformationController _transformController =
@@ -62,6 +64,10 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
       vsync: this,
       duration: const Duration(milliseconds: 800),
     )..value = 1.0;
+    _introController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
   }
 
   @override
@@ -71,6 +77,7 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
     _bounceController.dispose();
     _rotationController.dispose();
     _fillController.dispose();
+    _introController.dispose();
     _transformController.dispose();
     super.dispose();
   }
@@ -97,6 +104,7 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
   }
 
   void _onPointerHover(PointerHoverEvent event) {
+    if (_introController.isAnimating) return;
     if (_canvasSize == Size.zero) return;
     final scenePos = _transformController.toScene(event.localPosition);
     final hit = BlockHitTest.hitTest(scenePos, _canvasSize, _rotationAngle);
@@ -119,6 +127,7 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
   }
 
   void _onPointerUp(PointerUpEvent event) {
+    if (_introController.isAnimating) return;
     if (_pointerDownPos == null) return;
     final distance = (event.localPosition - _pointerDownPos!).distance;
     if (distance < 10 && _canvasSize != Size.zero) {
@@ -198,6 +207,12 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
             // 3D 뷰
             progressAsync.when(
               data: (data) {
+                if (!_introPlayed) {
+                  _introPlayed = true;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    _introController.forward(from: 0.0);
+                  });
+                }
                 if (_previousProgressData.isNotEmpty && data != _previousProgressData) {
                   final newBlocks = <int>{};
                   for (int i = 0; i < IsometricBiblePainter.totalPageBlocks; i++) {
@@ -230,7 +245,7 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
                     onPointerUp: _onPointerUp,
                     child: AnimatedBuilder(
                       animation: Listenable.merge(
-                          [_glowController, _bounceController, _rotationController, _fillController]),
+                          [_glowController, _bounceController, _rotationController, _fillController, _introController]),
                       builder: (context, _) {
                         return InteractiveViewer(
                           transformationController: _transformController,
@@ -252,6 +267,7 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
                                     rotationAngle: _rotationAngle,
                                     newlyFilledBlocks: _newlyFilledBlocks,
                                     fillAnimation: _fillController.value,
+                                    introAnimation: _introController.value,
                                   ),
                                 ),
                               );

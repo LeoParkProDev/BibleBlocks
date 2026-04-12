@@ -16,6 +16,7 @@ class IsometricBiblePainter extends CustomPainter {
   final double rotationAngle;
   final Set<int> newlyFilledBlocks;
   final double fillAnimation;
+  final double introAnimation; // 0.0 ~ 1.0
 
   IsometricBiblePainter({
     required this.progressData,
@@ -27,6 +28,7 @@ class IsometricBiblePainter extends CustomPainter {
     this.rotationAngle = 0.0,
     this.newlyFilledBlocks = const {},
     this.fillAnimation = 1.0,
+    this.introAnimation = 1.0,
   });
 
   // 책 구조 상수
@@ -186,6 +188,19 @@ class IsometricBiblePainter extends CustomPainter {
 
           final fillRatio = readCount / totalCount;
 
+          // Intro animation: blocks appear bottom-to-top, back-to-front
+          double introOpacity = 1.0;
+          double introZOffset = 0.0;
+          if (introAnimation < 1.0) {
+            final order = (bookHeight - 1 - z) * bookDepth + (bookDepth - 1 - y);
+            final maxOrder = bookHeight * bookDepth;
+            final blockDelay = order / maxOrder * 0.6;
+            final localT = ((introAnimation - blockDelay) / 0.4).clamp(0.0, 1.0);
+            introOpacity = localT;
+            introZOffset = (1.0 - localT) * 3.0;
+          }
+          if (introOpacity <= 0) continue;
+
           // z-offset: proximity float + bounce
           double zOffset = _proximityZOffset(
               x.toDouble(), y.toDouble(), z.toDouble(), origin);
@@ -208,9 +223,10 @@ class IsometricBiblePainter extends CustomPainter {
           }
 
           if (fillRatio >= 1.0) {
-            _drawCube(canvas, origin, x.toDouble(), y.toDouble(), effectiveZ + extraZOffset,
-                AppColors.pageIvory.withValues(alpha: animOpacity),
-                AppColors.pageIvoryDark.withValues(alpha: animOpacity));
+            _drawCube(canvas, origin, x.toDouble(), y.toDouble(),
+                effectiveZ + extraZOffset + introZOffset,
+                AppColors.pageIvory.withValues(alpha: animOpacity * introOpacity),
+                AppColors.pageIvoryDark.withValues(alpha: animOpacity * introOpacity));
           } else if (readCount > 0) {
             final baseAlpha = 0.15 + fillRatio * 0.35;
             _drawCube(
@@ -218,13 +234,16 @@ class IsometricBiblePainter extends CustomPainter {
               origin,
               x.toDouble(),
               y.toDouble(),
-              effectiveZ + extraZOffset,
-              AppColors.pageIvory.withValues(alpha: baseAlpha * animOpacity),
-              AppColors.pageIvoryDark.withValues(alpha: baseAlpha * animOpacity),
+              effectiveZ + extraZOffset + introZOffset,
+              AppColors.pageIvory.withValues(alpha: baseAlpha * animOpacity * introOpacity),
+              AppColors.pageIvoryDark.withValues(alpha: baseAlpha * animOpacity * introOpacity),
             );
           } else {
-            _drawWireframeCube(
-                canvas, origin, x.toDouble(), y.toDouble(), effectiveZ);
+            // Skip wireframes during intro (they appear when intro completes)
+            if (introAnimation >= 1.0) {
+              _drawWireframeCube(
+                  canvas, origin, x.toDouble(), y.toDouble(), effectiveZ);
+            }
           }
 
           // Highlight hovered block
@@ -242,6 +261,7 @@ class IsometricBiblePainter extends CustomPainter {
   }
 
   void _drawFrontCover(Canvas canvas, Offset origin) {
+    if (introAnimation < 0.3) return;
     for (int z = bookHeight - 1; z >= 0; z--) {
       for (int x = 0; x < bookWidth; x++) {
         final blockIndex = 0 * (bookWidth * bookHeight) + z * bookWidth + x;
@@ -274,6 +294,7 @@ class IsometricBiblePainter extends CustomPainter {
   }
 
   void _drawBackCover(Canvas canvas, Offset origin) {
+    if (introAnimation < 0.3) return;
     final backY = bookDepth.toDouble();
     for (int z = bookHeight - 1; z >= 0; z--) {
       for (int x = 0; x < bookWidth; x++) {
@@ -293,6 +314,7 @@ class IsometricBiblePainter extends CustomPainter {
   }
 
   void _drawSpine(Canvas canvas, Offset origin) {
+    if (introAnimation < 0.3) return;
     for (int y = bookDepth; y >= -1; y--) {
       for (int z = bookHeight - 1; z >= 0; z--) {
         bool adjacentFilled = false;
@@ -481,6 +503,7 @@ class IsometricBiblePainter extends CustomPainter {
         oldDelegate.cursorScenePos != cursorScenePos ||
         oldDelegate.rotationAngle != rotationAngle ||
         oldDelegate.fillAnimation != fillAnimation ||
-        oldDelegate.newlyFilledBlocks != newlyFilledBlocks;
+        oldDelegate.newlyFilledBlocks != newlyFilledBlocks ||
+        oldDelegate.introAnimation != introAnimation;
   }
 }
