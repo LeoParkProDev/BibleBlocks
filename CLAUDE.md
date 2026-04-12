@@ -59,3 +59,21 @@ users/{uid}/progress/{bookIndex}  # BookProgress (읽은 장 번호 Set)
 | 3D 배경 | `#0a0a1a` | 다크 — 블록이 돋보이도록 |
 
 색상: `lib/theme/app_colors.dart`, 테마: `lib/theme/app_theme.dart`
+
+## Deployment
+
+### Vercel (현재 사용 중)
+- URL: `https://bible-blocks-omega.vercel.app`
+- Vercel 프로젝트명: `bible-blocks`
+- GitHub: `LeoParkProDev/BibleBlocks`
+
+### 배포 명령
+```bash
+flutter build web --release
+vercel build --prod --yes
+vercel deploy --prebuilt --prod --yes
+```
+
+### 주의사항
+- `vercel --prod` 단독 사용 금지 — 반드시 `vercel build` → `vercel deploy --prebuilt` 순서
+- `vercel.json`: SPA fallback rewrite 설정됨
