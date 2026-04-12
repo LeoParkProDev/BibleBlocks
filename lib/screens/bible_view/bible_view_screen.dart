@@ -23,6 +23,7 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
   late AnimationController _glowController;
   late AnimationController _bounceController;
   late AnimationController _rotationController;
+  late AnimationController _fillController;
   double _rotationAngle = 0.0;
   int _rotationDirection = 0; // -1: left, 0: stop, 1: right
   final TransformationController _transformController =
@@ -33,6 +34,8 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
   Offset? _cursorScenePos;
   Offset? _pointerDownPos;
   Map<int, Set<int>> _latestProgressData = {};
+  Map<int, Set<int>> _previousProgressData = {};
+  Set<int> _newlyFilledBlocks = {};
   Size _canvasSize = Size.zero;
   Timer? _tooltipTimer;
 
@@ -55,6 +58,10 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
         _rotationAngle += _rotationDirection * 0.02;
       });
     });
+    _fillController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..value = 1.0;
   }
 
   @override
@@ -63,6 +70,7 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
     _glowController.dispose();
     _bounceController.dispose();
     _rotationController.dispose();
+    _fillController.dispose();
     _transformController.dispose();
     super.dispose();
   }
@@ -190,6 +198,24 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
             // 3D 뷰
             progressAsync.when(
               data: (data) {
+                if (_previousProgressData.isNotEmpty && data != _previousProgressData) {
+                  final newBlocks = <int>{};
+                  for (int i = 0; i < IsometricBiblePainter.totalPageBlocks; i++) {
+                    final range = BlockHitTest.blockChapterRange(i);
+                    bool wasFullBefore = true;
+                    bool isFullNow = true;
+                    for (int g = range.globalStart; g < range.globalEnd; g++) {
+                      if (!ProgressService.isGlobalIndexRead(_previousProgressData, g)) wasFullBefore = false;
+                      if (!ProgressService.isGlobalIndexRead(data, g)) isFullNow = false;
+                    }
+                    if (!wasFullBefore && isFullNow) newBlocks.add(i);
+                  }
+                  if (newBlocks.isNotEmpty) {
+                    _newlyFilledBlocks = newBlocks;
+                    _fillController.forward(from: 0.0);
+                  }
+                }
+                _previousProgressData = Map.of(data);
                 _latestProgressData = data;
                 _checkCompletion(data);
                 return MouseRegion(
@@ -204,7 +230,7 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
                     onPointerUp: _onPointerUp,
                     child: AnimatedBuilder(
                       animation: Listenable.merge(
-                          [_glowController, _bounceController, _rotationController]),
+                          [_glowController, _bounceController, _rotationController, _fillController]),
                       builder: (context, _) {
                         return InteractiveViewer(
                           transformationController: _transformController,
@@ -224,6 +250,8 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
                                     bounceAnimation: _bounceController.value,
                                     cursorScenePos: _cursorScenePos,
                                     rotationAngle: _rotationAngle,
+                                    newlyFilledBlocks: _newlyFilledBlocks,
+                                    fillAnimation: _fillController.value,
                                   ),
                                 ),
                               );

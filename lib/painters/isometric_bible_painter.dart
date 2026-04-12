@@ -14,6 +14,8 @@ class IsometricBiblePainter extends CustomPainter {
   final double bounceAnimation;
   final Offset? cursorScenePos;
   final double rotationAngle;
+  final Set<int> newlyFilledBlocks;
+  final double fillAnimation;
 
   IsometricBiblePainter({
     required this.progressData,
@@ -23,6 +25,8 @@ class IsometricBiblePainter extends CustomPainter {
     this.bounceAnimation = 0.0,
     this.cursorScenePos,
     this.rotationAngle = 0.0,
+    this.newlyFilledBlocks = const {},
+    this.fillAnimation = 1.0,
   });
 
   // 책 구조 상수
@@ -192,19 +196,31 @@ class IsometricBiblePainter extends CustomPainter {
           if (isPressed) zOffset += _bounceZOffset;
           final effectiveZ = z.toDouble() + zOffset;
 
+          // Fill animation for newly filled blocks
+          final isNewlyFilled = newlyFilledBlocks.contains(blockIndex);
+          double animOpacity = 1.0;
+          double extraZOffset = 0.0;
+          if (isNewlyFilled && fillAnimation < 1.0) {
+            final blockDelay = (blockIndex % 20) * 0.05;
+            final localT = ((fillAnimation - blockDelay) / (1.0 - blockDelay)).clamp(0.0, 1.0);
+            extraZOffset = (1.0 - localT) * 2.0;
+            animOpacity = localT;
+          }
+
           if (fillRatio >= 1.0) {
-            _drawCube(canvas, origin, x.toDouble(), y.toDouble(), effectiveZ,
-                AppColors.pageIvory, AppColors.pageIvoryDark);
+            _drawCube(canvas, origin, x.toDouble(), y.toDouble(), effectiveZ + extraZOffset,
+                AppColors.pageIvory.withValues(alpha: animOpacity),
+                AppColors.pageIvoryDark.withValues(alpha: animOpacity));
           } else if (readCount > 0) {
+            final baseAlpha = 0.15 + fillRatio * 0.35;
             _drawCube(
               canvas,
               origin,
               x.toDouble(),
               y.toDouble(),
-              effectiveZ,
-              AppColors.pageIvory.withValues(alpha: 0.15 + fillRatio * 0.35),
-              AppColors.pageIvoryDark
-                  .withValues(alpha: 0.15 + fillRatio * 0.35),
+              effectiveZ + extraZOffset,
+              AppColors.pageIvory.withValues(alpha: baseAlpha * animOpacity),
+              AppColors.pageIvoryDark.withValues(alpha: baseAlpha * animOpacity),
             );
           } else {
             _drawWireframeCube(
@@ -463,6 +479,8 @@ class IsometricBiblePainter extends CustomPainter {
         oldDelegate.pressedBlock != pressedBlock ||
         oldDelegate.bounceAnimation != bounceAnimation ||
         oldDelegate.cursorScenePos != cursorScenePos ||
-        oldDelegate.rotationAngle != rotationAngle;
+        oldDelegate.rotationAngle != rotationAngle ||
+        oldDelegate.fillAnimation != fillAnimation ||
+        oldDelegate.newlyFilledBlocks != newlyFilledBlocks;
   }
 }
