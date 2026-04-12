@@ -17,6 +17,12 @@ class ProgressNotifier extends AsyncNotifier<Map<int, Set<int>>> {
     return service.loadAll();
   }
 
+  Future<void> resetAll() async {
+    final service = ref.read(progressServiceProvider);
+    await service.resetAll();
+    state = const AsyncValue.data({});
+  }
+
   Future<void> toggleChapter(int bookIndex, int chapter) async {
     final service = ref.read(progressServiceProvider);
     final current = state.value ?? {};

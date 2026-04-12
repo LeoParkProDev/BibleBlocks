@@ -57,6 +57,12 @@ class ProgressService {
     await prefs.setString(_storageKey, jsonEncode(encoded));
   }
 
+  /// 전체 초기화
+  Future<void> resetAll() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_storageKey);
+  }
+
   /// 전체 읽은 장 수 계산
   static int totalRead(Map<int, Set<int>> data) {
     int count = 0;

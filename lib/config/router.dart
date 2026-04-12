@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../screens/bible_view/bible_view_screen.dart';
 import '../screens/checklist/checklist_screen.dart';
+import '../screens/settings/settings_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -31,6 +32,14 @@ final router = GoRouter(
             ),
           ],
         ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/settings',
+              builder: (context, state) => const SettingsScreen(),
+            ),
+          ],
+        ),
       ],
     ),
   ],
@@ -56,6 +65,10 @@ class ScaffoldWithNavBar extends StatelessWidget {
           BottomNavigationBarItem(
             icon: Icon(Icons.checklist),
             label: '체크리스트',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: '설정',
           ),
         ],
       ),
