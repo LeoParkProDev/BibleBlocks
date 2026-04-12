@@ -4,21 +4,32 @@ import 'package:flutter/material.dart';
 import '../data/bible_data.dart';
 import '../services/progress_service.dart';
 import '../theme/app_colors.dart';
+import 'block_hit_test.dart';
 
 class IsometricBiblePainter extends CustomPainter {
   final Map<int, Set<int>> progressData;
-  final double glowAnimation; // 0.0~1.0 for completion glow
+  final double glowAnimation;
+  final BlockCoord? hoveredBlock;
+  final BlockCoord? pressedBlock;
+  final double bounceAnimation;
+  final Offset? cursorScenePos;
+  final double rotationAngle;
 
   IsometricBiblePainter({
     required this.progressData,
     this.glowAnimation = 0.0,
+    this.hoveredBlock,
+    this.pressedBlock,
+    this.bounceAnimation = 0.0,
+    this.cursorScenePos,
+    this.rotationAngle = 0.0,
   });
 
   // 책 구조 상수
-  static const int bookWidth = 8; // x 방향 (페이지 가로)
-  static const int bookHeight = 12; // z 방향 (페이지 세로)
-  static const int bookDepth = 2; // y 방향 (책 두께 - 페이지 레이어)
-  static const int totalPageBlocks = bookWidth * bookHeight * bookDepth; // 192
+  static const int bookWidth = 8;
+  static const int bookHeight = 12;
+  static const int bookDepth = 2;
+  static const int totalPageBlocks = bookWidth * bookHeight * bookDepth;
 
   // 아이소메트릭 투영 상수
   static const double _cos30 = 0.866;
@@ -29,9 +40,13 @@ class IsometricBiblePainter extends CustomPainter {
       ProgressService.totalRead(progressData) >= BibleData.totalChapters;
 
   Offset project(double x, double y, double z, Offset origin) {
+    final cosA = cos(rotationAngle);
+    final sinA = sin(rotationAngle);
+    final rotatedX = x * cosA - y * sinA;
+    final rotatedY = x * sinA + y * cosA;
     return Offset(
-      origin.dx + (x - y) * _cos30 * blockSize,
-      origin.dy + (x + y) * _sin30 * blockSize - z * blockSize,
+      origin.dx + (rotatedX - rotatedY) * _cos30 * blockSize,
+      origin.dy + (rotatedX + rotatedY) * _sin30 * blockSize - z * blockSize,
     );
   }
 
@@ -51,43 +66,112 @@ class IsometricBiblePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final origin = Offset(size.width / 2, size.height * 0.65);
+    if (isComplete && glowAnimation > 0) _drawCompletionGlow(canvas, size, origin);
 
-    // 완독 시 배경 글로우
-    if (isComplete && glowAnimation > 0) {
-      _drawCompletionGlow(canvas, size, origin);
+    final normAngle = rotationAngle % (2 * pi);
+    final absAngle = normAngle < 0 ? normAngle + 2 * pi : normAngle;
+    final frontFirst = absAngle > pi / 2 && absAngle < 3 * pi / 2;
+
+    if (frontFirst) {
+      _drawFrontCover(canvas, origin);
+      _drawPageBlocks(canvas, origin);
+      _drawBackCover(canvas, origin);
+    } else {
+      _drawBackCover(canvas, origin);
+      _drawPageBlocks(canvas, origin);
+      _drawFrontCover(canvas, origin);
     }
-
-    // 뒤에서 앞 순서로 그리기 (painter's algorithm)
-    // 1) 뒷표지
-    _drawBackCover(canvas, origin);
-    // 2) 책등
     _drawSpine(canvas, origin);
-    // 3) 페이지 블록들 (뒤→앞)
-    _drawPageBlocks(canvas, origin);
-    // 4) 앞표지
-    _drawFrontCover(canvas, origin);
 
-    // 완독 시 파티클
-    if (isComplete && glowAnimation > 0) {
-      _drawParticles(canvas, size, origin);
-    }
+    if (isComplete && glowAnimation > 0) _drawParticles(canvas, size, origin);
+  }
+
+  double _proximityZOffset(double bx, double by, double bz, Offset origin) {
+    if (cursorScenePos == null) return 0;
+    final blockCenter = project(bx + 0.5, by + 0.5, bz + 0.5, origin);
+    final dist = (blockCenter - cursorScenePos!).distance;
+    if (dist > 60) return 0;
+    final ratio = 1 - (dist / 60);
+    return 0.15 * ratio * ratio;
+  }
+
+  double get _bounceZOffset {
+    if (pressedBlock == null || bounceAnimation <= 0) return 0;
+    final t = bounceAnimation;
+    return -0.3 * sin(t * pi * 2.5) * pow(1 - t, 2);
+  }
+
+  void _drawBlockHighlight(
+      Canvas canvas, Offset origin, double x, double y, double z) {
+    final highlightPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.15);
+    final p1 = project(x + 1, y, z, origin);
+    final p2 = project(x + 1, y + 1, z, origin);
+    final p3 = project(x, y + 1, z, origin);
+    final p4 = project(x, y, z + 1, origin);
+    final p5 = project(x + 1, y, z + 1, origin);
+    final p6 = project(x + 1, y + 1, z + 1, origin);
+    final p7 = project(x, y + 1, z + 1, origin);
+
+    final topPath = Path()
+      ..moveTo(p4.dx, p4.dy)
+      ..lineTo(p5.dx, p5.dy)
+      ..lineTo(p6.dx, p6.dy)
+      ..lineTo(p7.dx, p7.dy)
+      ..close();
+    final leftPath = Path()
+      ..moveTo(p3.dx, p3.dy)
+      ..lineTo(p2.dx, p2.dy)
+      ..lineTo(p6.dx, p6.dy)
+      ..lineTo(p7.dx, p7.dy)
+      ..close();
+    final rightPath = Path()
+      ..moveTo(p1.dx, p1.dy)
+      ..lineTo(p2.dx, p2.dy)
+      ..lineTo(p6.dx, p6.dy)
+      ..lineTo(p5.dx, p5.dy)
+      ..close();
+
+    canvas.drawPath(topPath, highlightPaint);
+    canvas.drawPath(leftPath, highlightPaint);
+    canvas.drawPath(rightPath, highlightPaint);
+
+    final outlinePaint = Paint()
+      ..color = AppColors.gold
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    canvas.drawPath(topPath, outlinePaint);
+    canvas.drawPath(leftPath, outlinePaint);
+    canvas.drawPath(rightPath, outlinePaint);
   }
 
   void _drawPageBlocks(Canvas canvas, Offset origin) {
-    // 뒤(y=bookDepth-1)부터 앞(y=0)으로, 위(z=bookHeight-1)부터 아래(z=0)로,
-    // 왼쪽(x=0)부터 오른쪽(x=bookWidth-1)으로
-    for (int y = bookDepth - 1; y >= 0; y--) {
+    final normAngle = rotationAngle % (2 * pi);
+    final absAngle = normAngle < 0 ? normAngle + 2 * pi : normAngle;
+
+    // Y direction: back-to-front vs front-to-back
+    final yReverse = absAngle > pi / 2 && absAngle < 3 * pi / 2;
+    // X direction: left-to-right vs right-to-left
+    final xReverse = absAngle > pi && absAngle < 2 * pi;
+
+    final yStart = yReverse ? 0 : bookDepth - 1;
+    final yEnd = yReverse ? bookDepth : -1;
+    final yStep = yReverse ? 1 : -1;
+
+    final xStart = xReverse ? 0 : bookWidth - 1;
+    final xEnd = xReverse ? bookWidth : -1;
+    final xStep = xReverse ? 1 : -1;
+
+    for (int y = yStart; y != yEnd; y += yStep) {
       for (int z = bookHeight - 1; z >= 0; z--) {
-        for (int x = 0; x < bookWidth; x++) {
+        for (int x = xStart; x != xEnd; x += xStep) {
           final blockIndex = y * (bookWidth * bookHeight) + z * bookWidth + x;
-          // 1189장을 192블록에 매핑: 나눠서 여러 장이 하나의 블록에
           final globalStart =
               (blockIndex * BibleData.totalChapters / totalPageBlocks).floor();
           final globalEnd =
               ((blockIndex + 1) * BibleData.totalChapters / totalPageBlocks)
                   .floor();
 
-          // 블록 내 읽은 비율 계산
           int readCount = 0;
           int totalCount = max(1, globalEnd - globalStart);
           for (int g = globalStart; g < globalEnd; g++) {
@@ -98,24 +182,43 @@ class IsometricBiblePainter extends CustomPainter {
 
           final fillRatio = readCount / totalCount;
 
+          // z-offset: proximity float + bounce
+          double zOffset = _proximityZOffset(
+              x.toDouble(), y.toDouble(), z.toDouble(), origin);
+          final isPressed = pressedBlock != null &&
+              pressedBlock!.x == x &&
+              pressedBlock!.y == y &&
+              pressedBlock!.z == z;
+          if (isPressed) zOffset += _bounceZOffset;
+          final effectiveZ = z.toDouble() + zOffset;
+
           if (fillRatio >= 1.0) {
-            // 블록 내 모든 장 완독 → 불투명 블록
-            _drawCube(canvas, origin, x.toDouble(), y.toDouble(),
-                z.toDouble(), AppColors.pageIvory, AppColors.pageIvoryDark);
+            _drawCube(canvas, origin, x.toDouble(), y.toDouble(), effectiveZ,
+                AppColors.pageIvory, AppColors.pageIvoryDark);
           } else if (readCount > 0) {
-            // 부분 읽음 → 반투명 블록 (진행 중 표시)
             _drawCube(
               canvas,
               origin,
               x.toDouble(),
               y.toDouble(),
-              z.toDouble(),
+              effectiveZ,
               AppColors.pageIvory.withValues(alpha: 0.15 + fillRatio * 0.35),
-              AppColors.pageIvoryDark.withValues(alpha: 0.15 + fillRatio * 0.35),
+              AppColors.pageIvoryDark
+                  .withValues(alpha: 0.15 + fillRatio * 0.35),
             );
           } else {
-            _drawWireframeCube(canvas, origin, x.toDouble(), y.toDouble(),
-                z.toDouble());
+            _drawWireframeCube(
+                canvas, origin, x.toDouble(), y.toDouble(), effectiveZ);
+          }
+
+          // Highlight hovered block
+          final isHovered = hoveredBlock != null &&
+              hoveredBlock!.x == x &&
+              hoveredBlock!.y == y &&
+              hoveredBlock!.z == z;
+          if (isHovered) {
+            _drawBlockHighlight(
+                canvas, origin, x.toDouble(), y.toDouble(), effectiveZ);
           }
         }
       }
@@ -123,29 +226,24 @@ class IsometricBiblePainter extends CustomPainter {
   }
 
   void _drawFrontCover(Canvas canvas, Offset origin) {
-    // 앞표지: y = -1 (앞)에 x × z 면
-    // 표지가 물질화하려면 y=0 레이어 블록들이 채워져야 함
     for (int z = bookHeight - 1; z >= 0; z--) {
       for (int x = 0; x < bookWidth; x++) {
-        // y=0 레이어의 같은 (x,z) 블록이 완전히 채워져야 표지 물질화
         final blockIndex = 0 * (bookWidth * bookHeight) + z * bookWidth + x;
         final adjacentFilled = _isBlockFullyRead(blockIndex);
 
         if (adjacentFilled) {
-          // 십자가 위치인지 확인
           final isCross = isCrossPosition(x, z);
           final topColor =
               isCross ? AppColors.gold : AppColors.coverBrown;
-          final sideColor =
-              isCross ? AppColors.gold.withValues(alpha: 0.8) : AppColors.coverDark;
+          final sideColor = isCross
+              ? AppColors.gold.withValues(alpha: 0.8)
+              : AppColors.coverDark;
 
           _drawCube(canvas, origin, x.toDouble(), -1.0, z.toDouble(), topColor,
               sideColor);
 
-          // 완독 시 십자가 글로우
           if (isCross && isComplete && glowAnimation > 0) {
-            final center =
-                project(x + 0.5, -0.5, z + 0.5, origin);
+            final center = project(x + 0.5, -0.5, z + 0.5, origin);
             final glowPaint = Paint()
               ..color = AppColors.gold.withValues(alpha: 0.3 * glowAnimation)
               ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
@@ -160,11 +258,9 @@ class IsometricBiblePainter extends CustomPainter {
   }
 
   void _drawBackCover(Canvas canvas, Offset origin) {
-    // 뒷표지: y = bookDepth (뒤)
     final backY = bookDepth.toDouble();
     for (int z = bookHeight - 1; z >= 0; z--) {
       for (int x = 0; x < bookWidth; x++) {
-        // y=bookDepth-1 레이어 블록이 완전히 채워져야 뒷표지 물질화
         final blockIndex =
             (bookDepth - 1) * (bookWidth * bookHeight) + z * bookWidth + x;
         final adjacentFilled = _isBlockFullyRead(blockIndex);
@@ -181,10 +277,8 @@ class IsometricBiblePainter extends CustomPainter {
   }
 
   void _drawSpine(Canvas canvas, Offset origin) {
-    // 책등: x = -1, 모든 y와 z
     for (int y = bookDepth; y >= -1; y--) {
       for (int z = bookHeight - 1; z >= 0; z--) {
-        // 인접 블록이 완전히 채워져야 책등 물질화
         bool adjacentFilled = false;
         if (y >= 0 && y < bookDepth) {
           final blockIndex = y * (bookWidth * bookHeight) + z * bookWidth + 0;
@@ -208,20 +302,16 @@ class IsometricBiblePainter extends CustomPainter {
   }
 
   static bool isCrossPosition(int x, int z) {
-    // 8x12 그리드에서 십자가 패턴 (가로 중앙, 세로 중앙)
-    const cx = 3; // 중앙 x (0-indexed, 8칸이면 3~4)
+    const cx = 3;
     const cx2 = 4;
-    const cz = 5; // 중앙 z 기준
-    // 세로 바: x=3,4, z=2~9
+    const cz = 5;
     if ((x == cx || x == cx2) && z >= 2 && z <= 9) return true;
-    // 가로 바: z=5,6, x=1~6
     if ((z == cz || z == cz + 1) && x >= 1 && x <= 6) return true;
     return false;
   }
 
   void _drawCube(Canvas canvas, Offset origin, double x, double y, double z,
       Color topColor, Color sideColor) {
-    // 큐브의 8개 꼭짓점
     final p1 = project(x + 1, y, z, origin);
     final p2 = project(x + 1, y + 1, z, origin);
     final p3 = project(x, y + 1, z, origin);
@@ -249,7 +339,7 @@ class IsometricBiblePainter extends CustomPainter {
         ..strokeWidth = 0.5,
     );
 
-    // 왼쪽면 (x 방향, y에서 y+1)
+    // 왼쪽면
     final leftPath = Path()
       ..moveTo(p3.dx, p3.dy)
       ..lineTo(p2.dx, p2.dy)
@@ -268,7 +358,7 @@ class IsometricBiblePainter extends CustomPainter {
         ..strokeWidth = 0.5,
     );
 
-    // 오른쪽면 (y 방향, x에서 x+1)
+    // 오른쪽면
     final rightPath = Path()
       ..moveTo(p1.dx, p1.dy)
       ..lineTo(p2.dx, p2.dy)
@@ -304,7 +394,6 @@ class IsometricBiblePainter extends CustomPainter {
     final p6 = project(x + 1, y + 1, z + 1, origin);
     final p7 = project(x, y + 1, z + 1, origin);
 
-    // 윗면
     final topPath = Path()
       ..moveTo(p4.dx, p4.dy)
       ..lineTo(p5.dx, p5.dy)
@@ -313,7 +402,6 @@ class IsometricBiblePainter extends CustomPainter {
       ..close();
     canvas.drawPath(topPath, paint);
 
-    // 왼쪽면
     final leftPath = Path()
       ..moveTo(p3.dx, p3.dy)
       ..lineTo(p2.dx, p2.dy)
@@ -322,7 +410,6 @@ class IsometricBiblePainter extends CustomPainter {
       ..close();
     canvas.drawPath(leftPath, paint);
 
-    // 오른쪽면
     final rightPath = Path()
       ..moveTo(p1.dx, p1.dy)
       ..lineTo(p2.dx, p2.dy)
@@ -333,7 +420,6 @@ class IsometricBiblePainter extends CustomPainter {
   }
 
   void _drawCompletionGlow(Canvas canvas, Size size, Offset origin) {
-    // 중앙에서 퍼져나가는 금색 글로우
     final glowPaint = Paint()
       ..shader = RadialGradient(
         colors: [
@@ -347,7 +433,7 @@ class IsometricBiblePainter extends CustomPainter {
   }
 
   void _drawParticles(Canvas canvas, Size size, Offset origin) {
-    final random = Random(42); // 고정 시드로 일관된 위치
+    final random = Random(42);
     final particlePaint = Paint();
 
     for (int i = 0; i < 30; i++) {
@@ -358,7 +444,8 @@ class IsometricBiblePainter extends CustomPainter {
 
       if (alpha > 0) {
         final px = origin.dx + cos(angle) * dist * phase;
-        final py = origin.dy - 100 + sin(angle) * dist * 0.5 * phase - phase * 80;
+        final py =
+            origin.dy - 100 + sin(angle) * dist * 0.5 * phase - phase * 80;
         final radius = 1.5 + random.nextDouble() * 2.0;
 
         particlePaint.color =
@@ -371,6 +458,11 @@ class IsometricBiblePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant IsometricBiblePainter oldDelegate) {
     return oldDelegate.progressData != progressData ||
-        oldDelegate.glowAnimation != glowAnimation;
+        oldDelegate.glowAnimation != glowAnimation ||
+        oldDelegate.hoveredBlock != hoveredBlock ||
+        oldDelegate.pressedBlock != pressedBlock ||
+        oldDelegate.bounceAnimation != bounceAnimation ||
+        oldDelegate.cursorScenePos != cursorScenePos ||
+        oldDelegate.rotationAngle != rotationAngle;
   }
 }
