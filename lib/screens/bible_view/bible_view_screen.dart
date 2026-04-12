@@ -1,7 +1,11 @@
+import 'dart:async';
+
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/bible_data.dart';
+import '../../painters/block_hit_test.dart';
 import '../../painters/isometric_bible_painter.dart';
 import '../../providers/progress_provider.dart';
 import '../../services/progress_service.dart';
@@ -15,8 +19,22 @@ class BibleViewScreen extends ConsumerStatefulWidget {
 }
 
 class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _glowController;
+  late AnimationController _bounceController;
+  late AnimationController _rotationController;
+  double _rotationAngle = 0.0;
+  int _rotationDirection = 0; // -1: left, 0: stop, 1: right
+  final TransformationController _transformController =
+      TransformationController();
+
+  BlockCoord? _hoveredBlock;
+  BlockCoord? _pressedBlock;
+  Offset? _cursorScenePos;
+  Offset? _pointerDownPos;
+  Map<int, Set<int>> _latestProgressData = {};
+  Size _canvasSize = Size.zero;
+  Timer? _tooltipTimer;
 
   @override
   void initState() {
@@ -25,11 +43,27 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
       vsync: this,
       duration: const Duration(seconds: 3),
     );
+    _bounceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _rotationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    )..addListener(() {
+      setState(() {
+        _rotationAngle += _rotationDirection * 0.02;
+      });
+    });
   }
 
   @override
   void dispose() {
+    _tooltipTimer?.cancel();
     _glowController.dispose();
+    _bounceController.dispose();
+    _rotationController.dispose();
+    _transformController.dispose();
     super.dispose();
   }
 
@@ -44,6 +78,103 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
     }
   }
 
+  void _startRotation(int direction) {
+    _rotationDirection = direction;
+    _rotationController.repeat();
+  }
+
+  void _stopRotation() {
+    _rotationDirection = 0;
+    _rotationController.stop();
+  }
+
+  void _onPointerHover(PointerHoverEvent event) {
+    if (_canvasSize == Size.zero) return;
+    final scenePos = _transformController.toScene(event.localPosition);
+    final hit = BlockHitTest.hitTest(scenePos, _canvasSize, _rotationAngle);
+    setState(() {
+      _hoveredBlock = hit;
+      _cursorScenePos = scenePos;
+    });
+  }
+
+  void _onPointerMove(PointerMoveEvent event) {
+    if (_canvasSize == Size.zero) return;
+    final scenePos = _transformController.toScene(event.localPosition);
+    setState(() {
+      _cursorScenePos = scenePos;
+    });
+  }
+
+  void _onPointerDown(PointerDownEvent event) {
+    _pointerDownPos = event.localPosition;
+  }
+
+  void _onPointerUp(PointerUpEvent event) {
+    if (_pointerDownPos == null) return;
+    final distance = (event.localPosition - _pointerDownPos!).distance;
+    if (distance < 10 && _canvasSize != Size.zero) {
+      final scenePos = _transformController.toScene(event.localPosition);
+      final hit = BlockHitTest.hitTest(scenePos, _canvasSize, _rotationAngle);
+      if (hit != null) {
+        _handleBlockTap(hit);
+      }
+    }
+    _pointerDownPos = null;
+  }
+
+  void _handleBlockTap(BlockCoord block) {
+    setState(() {
+      _pressedBlock = block;
+      _hoveredBlock = block;
+    });
+    _bounceController.forward(from: 0.0).then((_) {
+      if (mounted) setState(() => _pressedBlock = null);
+    });
+
+    // Mobile: auto-dismiss tooltip after 2s
+    _tooltipTimer?.cancel();
+    _tooltipTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _hoveredBlock = null);
+    });
+  }
+
+  Widget _buildTooltip() {
+    final blockIndex = BlockHitTest.toBlockIndex(_hoveredBlock!);
+    final text = BlockHitTest.tooltipText(blockIndex, _latestProgressData);
+    if (text.isEmpty) return const SizedBox.shrink();
+
+    final canvasPos = BlockHitTest.blockTopCenter(_hoveredBlock!, _canvasSize, _rotationAngle);
+    final screenPos =
+        MatrixUtils.transformPoint(_transformController.value, canvasPos);
+
+    return Positioned(
+      left: screenPos.dx,
+      top: screenPos.dy - 8,
+      child: IgnorePointer(
+        child: FractionalTranslation(
+          translation: const Offset(-0.5, -1.0),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.85),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: AppColors.gold, width: 0.5),
+            ),
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                decoration: TextDecoration.none,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final progressAsync = ref.watch(progressProvider);
@@ -54,27 +185,54 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
       backgroundColor: AppColors.darkBg,
       body: SafeArea(
         child: Stack(
+          clipBehavior: Clip.none,
           children: [
             // 3D 뷰
             progressAsync.when(
               data: (data) {
+                _latestProgressData = data;
                 _checkCompletion(data);
-                return AnimatedBuilder(
-                  animation: _glowController,
-                  builder: (context, _) {
-                    return InteractiveViewer(
-                      minScale: 0.5,
-                      maxScale: 3.0,
-                      child: SizedBox.expand(
-                        child: CustomPaint(
-                          painter: IsometricBiblePainter(
-                            progressData: data,
-                            glowAnimation: _glowController.value,
+                return MouseRegion(
+                  onExit: (_) => setState(() {
+                    _hoveredBlock = null;
+                    _cursorScenePos = null;
+                  }),
+                  child: Listener(
+                    onPointerHover: _onPointerHover,
+                    onPointerMove: _onPointerMove,
+                    onPointerDown: _onPointerDown,
+                    onPointerUp: _onPointerUp,
+                    child: AnimatedBuilder(
+                      animation: Listenable.merge(
+                          [_glowController, _bounceController, _rotationController]),
+                      builder: (context, _) {
+                        return InteractiveViewer(
+                          transformationController: _transformController,
+                          minScale: 0.5,
+                          maxScale: 3.0,
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              _canvasSize = Size(
+                                  constraints.maxWidth, constraints.maxHeight);
+                              return SizedBox.expand(
+                                child: CustomPaint(
+                                  painter: IsometricBiblePainter(
+                                    progressData: data,
+                                    glowAnimation: _glowController.value,
+                                    hoveredBlock: _hoveredBlock,
+                                    pressedBlock: _pressedBlock,
+                                    bounceAnimation: _bounceController.value,
+                                    cursorScenePos: _cursorScenePos,
+                                    rotationAngle: _rotationAngle,
+                                  ),
+                                ),
+                              );
+                            },
                           ),
-                        ),
-                      ),
-                    );
-                  },
+                        );
+                      },
+                    ),
+                  ),
                 );
               },
               loading: () => const Center(
@@ -122,19 +280,60 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
               ),
             ),
 
-            // 하단 힌트
+            // 툴팁
+            if (_hoveredBlock != null && _canvasSize != Size.zero)
+              _buildTooltip(),
+
+            // 하단 회전 버튼 + 힌트
             Positioned(
               bottom: 16,
               left: 0,
               right: 0,
-              child: Center(
-                child: Text(
-                  '핀치로 확대 · 드래그로 이동',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.3),
-                    fontSize: 12,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  GestureDetector(
+                    onLongPressStart: (_) => _startRotation(-1),
+                    onLongPressEnd: (_) => _stopRotation(),
+                    onTapDown: (_) => _startRotation(-1),
+                    onTapUp: (_) => _stopRotation(),
+                    onTapCancel: _stopRotation,
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: const Icon(Icons.rotate_left, color: Colors.white54, size: 24),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 24),
+                  Text(
+                    '핀치로 확대 · 드래그로 이동',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(width: 24),
+                  GestureDetector(
+                    onLongPressStart: (_) => _startRotation(1),
+                    onLongPressEnd: (_) => _stopRotation(),
+                    onTapDown: (_) => _startRotation(1),
+                    onTapUp: (_) => _stopRotation(),
+                    onTapCancel: _stopRotation,
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: const Icon(Icons.rotate_right, color: Colors.white54, size: 24),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
