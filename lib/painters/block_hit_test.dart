@@ -68,12 +68,28 @@ class BlockHitTest {
       ..close();
   }
 
-  /// Front-to-back hit test: returns the first block whose face contains the point
+  /// Front-to-back hit test: returns the first block whose face contains the point.
+  /// Traversal order along x and y axes is adjusted based on angle so that the
+  /// front-facing and right-facing layers are always tested first.
   static BlockCoord? hitTest(Offset scenePoint, Size canvasSize, [double angle = 0]) {
     final orig = origin(canvasSize);
-    for (int y = 0; y < bookDepth; y++) {
+    // The isometric projection maps:
+    //   rotatedX = x*cos(angle) - y*sin(angle)
+    //   rotatedY = x*sin(angle) + y*cos(angle)
+    // screen dx ∝ (rotatedX - rotatedY), screen dy ∝ (rotatedX + rotatedY)
+    //
+    // For correct front-to-back ordering:
+    //   y: iterate from front (smaller rotatedY contributor) to back.
+    //     cos(angle) < 0  → y=bookDepth-1 is visually closest → iterate reversed.
+    //   x: iterate from visual right to visual left (larger screen dx first).
+    //     cos(angle) < 0  → x=0 projects to larger screen dx → iterate 0..bookWidth-1.
+    final yReverse = cos(angle) < 0;
+    final xReverse = cos(angle) < 0;
+    for (int yi = 0; yi < bookDepth; yi++) {
+      final y = yReverse ? (bookDepth - 1 - yi) : yi;
       for (int z = 0; z < bookHeight; z++) {
-        for (int x = bookWidth - 1; x >= 0; x--) {
+        for (int xi = 0; xi < bookWidth; xi++) {
+          final x = xReverse ? xi : (bookWidth - 1 - xi);
           final dx = x.toDouble();
           final dy = y.toDouble();
           final dz = z.toDouble();
