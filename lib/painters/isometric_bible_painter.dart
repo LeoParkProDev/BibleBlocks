@@ -25,14 +25,27 @@ class IsometricBiblePainter extends CustomPainter {
   static const double _sin30 = 0.5;
   static const double blockSize = 14.0;
 
-  bool get _isComplete =>
+  bool get isComplete =>
       ProgressService.totalRead(progressData) >= BibleData.totalChapters;
 
-  Offset _project(double x, double y, double z, Offset origin) {
+  Offset project(double x, double y, double z, Offset origin) {
     return Offset(
       origin.dx + (x - y) * _cos30 * blockSize,
       origin.dy + (x + y) * _sin30 * blockSize - z * blockSize,
     );
+  }
+
+  /// 블록 내 모든 장이 읽혔는지 확인
+  bool _isBlockFullyRead(int blockIndex) {
+    final globalStart =
+        (blockIndex * BibleData.totalChapters / totalPageBlocks).floor();
+    final globalEnd =
+        ((blockIndex + 1) * BibleData.totalChapters / totalPageBlocks).floor();
+    if (globalEnd <= globalStart) return false;
+    for (int g = globalStart; g < globalEnd; g++) {
+      if (!ProgressService.isGlobalIndexRead(progressData, g)) return false;
+    }
+    return true;
   }
 
   @override
@@ -40,7 +53,7 @@ class IsometricBiblePainter extends CustomPainter {
     final origin = Offset(size.width / 2, size.height * 0.65);
 
     // 완독 시 배경 글로우
-    if (_isComplete && glowAnimation > 0) {
+    if (isComplete && glowAnimation > 0) {
       _drawCompletionGlow(canvas, size, origin);
     }
 
@@ -55,7 +68,7 @@ class IsometricBiblePainter extends CustomPainter {
     _drawFrontCover(canvas, origin);
 
     // 완독 시 파티클
-    if (_isComplete && glowAnimation > 0) {
+    if (isComplete && glowAnimation > 0) {
       _drawParticles(canvas, size, origin);
     }
   }
@@ -74,29 +87,31 @@ class IsometricBiblePainter extends CustomPainter {
               ((blockIndex + 1) * BibleData.totalChapters / totalPageBlocks)
                   .floor();
 
-          // 이 블록에 매핑된 장들 중 하나라도 읽었으면 채움
-          bool isRead = false;
-          // 읽은 비율 계산 (부분 채움)
+          // 블록 내 읽은 비율 계산
           int readCount = 0;
           int totalCount = max(1, globalEnd - globalStart);
           for (int g = globalStart; g < globalEnd; g++) {
             if (ProgressService.isGlobalIndexRead(progressData, g)) {
-              isRead = true;
               readCount++;
             }
           }
 
           final fillRatio = readCount / totalCount;
 
-          if (isRead) {
+          if (fillRatio >= 1.0) {
+            // 블록 내 모든 장 완독 → 불투명 블록
+            _drawCube(canvas, origin, x.toDouble(), y.toDouble(),
+                z.toDouble(), AppColors.pageIvory, AppColors.pageIvoryDark);
+          } else if (readCount > 0) {
+            // 부분 읽음 → 반투명 블록 (진행 중 표시)
             _drawCube(
               canvas,
               origin,
               x.toDouble(),
               y.toDouble(),
               z.toDouble(),
-              AppColors.pageIvory.withValues(alpha: 0.5 + fillRatio * 0.5),
-              AppColors.pageIvoryDark.withValues(alpha: 0.5 + fillRatio * 0.5),
+              AppColors.pageIvory.withValues(alpha: 0.15 + fillRatio * 0.35),
+              AppColors.pageIvoryDark.withValues(alpha: 0.15 + fillRatio * 0.35),
             );
           } else {
             _drawWireframeCube(canvas, origin, x.toDouble(), y.toDouble(),
@@ -112,25 +127,13 @@ class IsometricBiblePainter extends CustomPainter {
     // 표지가 물질화하려면 y=0 레이어 블록들이 채워져야 함
     for (int z = bookHeight - 1; z >= 0; z--) {
       for (int x = 0; x < bookWidth; x++) {
-        // y=0 레이어의 같은 (x,z) 블록이 채워져 있는지 확인
+        // y=0 레이어의 같은 (x,z) 블록이 완전히 채워져야 표지 물질화
         final blockIndex = 0 * (bookWidth * bookHeight) + z * bookWidth + x;
-        final globalStart =
-            (blockIndex * BibleData.totalChapters / totalPageBlocks).floor();
-        final globalEnd =
-            ((blockIndex + 1) * BibleData.totalChapters / totalPageBlocks)
-                .floor();
-
-        bool adjacentFilled = false;
-        for (int g = globalStart; g < globalEnd; g++) {
-          if (ProgressService.isGlobalIndexRead(progressData, g)) {
-            adjacentFilled = true;
-            break;
-          }
-        }
+        final adjacentFilled = _isBlockFullyRead(blockIndex);
 
         if (adjacentFilled) {
           // 십자가 위치인지 확인
-          final isCross = _isCrossPosition(x, z);
+          final isCross = isCrossPosition(x, z);
           final topColor =
               isCross ? AppColors.gold : AppColors.coverBrown;
           final sideColor =
@@ -140,9 +143,9 @@ class IsometricBiblePainter extends CustomPainter {
               sideColor);
 
           // 완독 시 십자가 글로우
-          if (isCross && _isComplete && glowAnimation > 0) {
+          if (isCross && isComplete && glowAnimation > 0) {
             final center =
-                _project(x + 0.5, -0.5, z + 0.5, origin);
+                project(x + 0.5, -0.5, z + 0.5, origin);
             final glowPaint = Paint()
               ..color = AppColors.gold.withValues(alpha: 0.3 * glowAnimation)
               ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
@@ -161,22 +164,10 @@ class IsometricBiblePainter extends CustomPainter {
     final backY = bookDepth.toDouble();
     for (int z = bookHeight - 1; z >= 0; z--) {
       for (int x = 0; x < bookWidth; x++) {
-        // y=bookDepth-1 레이어 블록이 채워져 있는지 확인
+        // y=bookDepth-1 레이어 블록이 완전히 채워져야 뒷표지 물질화
         final blockIndex =
             (bookDepth - 1) * (bookWidth * bookHeight) + z * bookWidth + x;
-        final globalStart =
-            (blockIndex * BibleData.totalChapters / totalPageBlocks).floor();
-        final globalEnd =
-            ((blockIndex + 1) * BibleData.totalChapters / totalPageBlocks)
-                .floor();
-
-        bool adjacentFilled = false;
-        for (int g = globalStart; g < globalEnd; g++) {
-          if (ProgressService.isGlobalIndexRead(progressData, g)) {
-            adjacentFilled = true;
-            break;
-          }
-        }
+        final adjacentFilled = _isBlockFullyRead(blockIndex);
 
         if (adjacentFilled) {
           _drawCube(canvas, origin, x.toDouble(), backY, z.toDouble(),
@@ -193,37 +184,16 @@ class IsometricBiblePainter extends CustomPainter {
     // 책등: x = -1, 모든 y와 z
     for (int y = bookDepth; y >= -1; y--) {
       for (int z = bookHeight - 1; z >= 0; z--) {
-        // 인접 블록 확인 (x=0의 같은 y, z)
+        // 인접 블록이 완전히 채워져야 책등 물질화
         bool adjacentFilled = false;
         if (y >= 0 && y < bookDepth) {
           final blockIndex = y * (bookWidth * bookHeight) + z * bookWidth + 0;
-          final globalStart =
-              (blockIndex * BibleData.totalChapters / totalPageBlocks).floor();
-          final globalEnd =
-              ((blockIndex + 1) * BibleData.totalChapters / totalPageBlocks)
-                  .floor();
-          for (int g = globalStart; g < globalEnd; g++) {
-            if (ProgressService.isGlobalIndexRead(progressData, g)) {
-              adjacentFilled = true;
-              break;
-            }
-          }
+          adjacentFilled = _isBlockFullyRead(blockIndex);
         } else {
-          // 표지/뒷표지 y에서는, 표지가 물질화되어 있으면 책등도 물질화
           final checkY = y == -1 ? 0 : bookDepth - 1;
           final blockIndex =
               checkY * (bookWidth * bookHeight) + z * bookWidth + 0;
-          final globalStart =
-              (blockIndex * BibleData.totalChapters / totalPageBlocks).floor();
-          final globalEnd =
-              ((blockIndex + 1) * BibleData.totalChapters / totalPageBlocks)
-                  .floor();
-          for (int g = globalStart; g < globalEnd; g++) {
-            if (ProgressService.isGlobalIndexRead(progressData, g)) {
-              adjacentFilled = true;
-              break;
-            }
-          }
+          adjacentFilled = _isBlockFullyRead(blockIndex);
         }
 
         if (adjacentFilled) {
@@ -237,7 +207,7 @@ class IsometricBiblePainter extends CustomPainter {
     }
   }
 
-  bool _isCrossPosition(int x, int z) {
+  static bool isCrossPosition(int x, int z) {
     // 8x12 그리드에서 십자가 패턴 (가로 중앙, 세로 중앙)
     const cx = 3; // 중앙 x (0-indexed, 8칸이면 3~4)
     const cx2 = 4;
@@ -252,13 +222,13 @@ class IsometricBiblePainter extends CustomPainter {
   void _drawCube(Canvas canvas, Offset origin, double x, double y, double z,
       Color topColor, Color sideColor) {
     // 큐브의 8개 꼭짓점
-    final p1 = _project(x + 1, y, z, origin);
-    final p2 = _project(x + 1, y + 1, z, origin);
-    final p3 = _project(x, y + 1, z, origin);
-    final p4 = _project(x, y, z + 1, origin);
-    final p5 = _project(x + 1, y, z + 1, origin);
-    final p6 = _project(x + 1, y + 1, z + 1, origin);
-    final p7 = _project(x, y + 1, z + 1, origin);
+    final p1 = project(x + 1, y, z, origin);
+    final p2 = project(x + 1, y + 1, z, origin);
+    final p3 = project(x, y + 1, z, origin);
+    final p4 = project(x, y, z + 1, origin);
+    final p5 = project(x + 1, y, z + 1, origin);
+    final p6 = project(x + 1, y + 1, z + 1, origin);
+    final p7 = project(x, y + 1, z + 1, origin);
 
     // 윗면 (z+1)
     final topPath = Path()
@@ -326,13 +296,13 @@ class IsometricBiblePainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.3;
 
-    final p1 = _project(x + 1, y, z, origin);
-    final p2 = _project(x + 1, y + 1, z, origin);
-    final p3 = _project(x, y + 1, z, origin);
-    final p4 = _project(x, y, z + 1, origin);
-    final p5 = _project(x + 1, y, z + 1, origin);
-    final p6 = _project(x + 1, y + 1, z + 1, origin);
-    final p7 = _project(x, y + 1, z + 1, origin);
+    final p1 = project(x + 1, y, z, origin);
+    final p2 = project(x + 1, y + 1, z, origin);
+    final p3 = project(x, y + 1, z, origin);
+    final p4 = project(x, y, z + 1, origin);
+    final p5 = project(x + 1, y, z + 1, origin);
+    final p6 = project(x + 1, y + 1, z + 1, origin);
+    final p7 = project(x, y + 1, z + 1, origin);
 
     // 윗면
     final topPath = Path()
