@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/bible_data.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/progress_provider.dart';
 import '../../theme/app_colors.dart';
 
@@ -42,6 +43,12 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('체크리스트'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            onPressed: () => _showProfileDialog(context),
+          ),
+        ],
       ),
       body: Center(
         child: ConstrainedBox(
@@ -281,6 +288,88 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
           ),
         );
       },
+    );
+  }
+
+  void _showProfileDialog(BuildContext context) {
+    final user = ref.read(authProvider).value;
+    final isGuest = ref.read(isGuestProvider);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 프로필 이미지
+            CircleAvatar(
+              radius: 32,
+              backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+              backgroundImage: user?.profileImageUrl != null
+                  ? NetworkImage(user!.profileImageUrl!)
+                  : null,
+              child: user?.profileImageUrl == null
+                  ? const Icon(Icons.person, size: 32, color: AppColors.primary)
+                  : null,
+            ),
+            const SizedBox(height: 12),
+            // 닉네임
+            Text(
+              isGuest ? '게스트' : (user?.nickname ?? '사용자'),
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            if (isGuest) ...[
+              const SizedBox(height: 4),
+              const Text(
+                '로그인하면 데이터가 계정에 저장됩니다',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+            const SizedBox(height: 20),
+            // 로그아웃 / 로그인 버튼
+            SizedBox(
+              width: double.infinity,
+              child: isGuest
+                  ? OutlinedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        ref.read(isGuestProvider.notifier).set(false);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        side: const BorderSide(color: AppColors.primary),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text('카카오 로그인으로 전환'),
+                    )
+                  : OutlinedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        ref.read(authProvider.notifier).logout();
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textSecondary,
+                        side: const BorderSide(color: AppColors.border),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text('로그아웃'),
+                    ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

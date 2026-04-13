@@ -2,8 +2,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/bible_data.dart';
 import '../services/progress_service.dart';
+import 'auth_provider.dart';
 
-final progressServiceProvider = Provider((ref) => ProgressService());
+final progressServiceProvider = Provider<ProgressService>((ref) {
+  final authState = ref.watch(authProvider);
+  final userId = authState.value?.id.toString();
+  return ProgressService(userId: userId);
+});
 
 final progressProvider =
     AsyncNotifierProvider<ProgressNotifier, Map<int, Set<int>>>(
@@ -13,7 +18,7 @@ final progressProvider =
 class ProgressNotifier extends AsyncNotifier<Map<int, Set<int>>> {
   @override
   Future<Map<int, Set<int>>> build() async {
-    final service = ref.read(progressServiceProvider);
+    final service = ref.watch(progressServiceProvider);
     return service.loadAll();
   }
 
