@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../data/bible_data.dart';
 import '../../painters/block_hit_test.dart';
@@ -295,15 +296,6 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
               right: 20,
               child: Row(
                 children: [
-                  const Text(
-                    '내 성경',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const Spacer(),
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -317,6 +309,23 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
                         color: AppColors.gold,
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => context.go('/settings'),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: const Icon(
+                        Icons.person_outline,
+                        color: Colors.white70,
+                        size: 20,
                       ),
                     ),
                   ),
