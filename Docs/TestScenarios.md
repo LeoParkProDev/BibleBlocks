@@ -1,7 +1,7 @@
-# BibleBlocks 필수 테스트 시나리오 (50개)
+# BibleBlocks 필수 테스트 시나리오 (61개)
 
 > 각 시나리오는 `[카테고리-번호]` 형식으로 관리.
-> 상태: `[x]` 전체 50개 구현 완료 (2026-04-13)
+> 상태: 50개 구현 완료 + 11개 신규 추가 (2026-04-13)
 >
 > **테스트 파일 매핑**:
 > - A: `test/data/bible_data_test.dart`
@@ -107,6 +107,18 @@
 - **검증**: 창세기 1장(global=0) 읽음 → true, 창세기 2장(global=1) 안읽음 → false
 - **유형**: Unit
 
+### C-11. toggleAllChapters — 미완독 책 전체 읽음 처리
+- **검증**: 빈 상태에서 `toggleAllChapters({}, 0, 50)` → `{0: {1,2,...,50}}`
+- **유형**: Unit
+
+### C-12. toggleAllChapters — 완독 책 전체 해제
+- **검증**: 전체 읽음 상태에서 `toggleAllChapters(data, 0, 50)` → key `0` 삭제
+- **유형**: Unit
+
+### C-13. toggleAllChapters — 부분 읽음 → 전체 읽음
+- **검증**: `{0: {1,3,5}}` 상태에서 `toggleAllChapters(data, 0, 50)` → `{0: {1,2,...,50}}`
+- **유형**: Unit
+
 ---
 
 ## D. Providers — 상태 관리 (5개)
@@ -129,6 +141,14 @@
 
 ### D-05. 다중 토글 후 상태 일관성
 - **검증**: 같은 장 ON→OFF→ON 반복 후 최종 상태 정확
+- **유형**: Unit (ProviderContainer)
+
+### D-06. toggleAllChapters 호출 후 state 즉시 반영
+- **검증**: `notifier.toggleAllChapters(0, 50)` → state에 `{0: {1..50}}` 반영
+- **유형**: Unit (ProviderContainer)
+
+### D-07. toggleAllChapters 후 totalReadProvider 정확
+- **검증**: 창세기 전체 읽음 → `totalReadProvider == 50`
 - **유형**: Unit (ProviderContainer)
 
 ---
@@ -175,6 +195,18 @@
 - **검증**: 오바댜(1장) 완독 → 해당 행 아이콘이 `Icons.check`
 - **유형**: Widget
 
+### E-11. 책 헤더 롱프레스 → 전체 읽음 처리 + SnackBar
+- **검증**: 오바댜 롱프레스 → 1장 읽음 처리, "오바댜 1장 전체 읽음" SnackBar 표시
+- **유형**: Widget
+
+### E-12. 완독 책 헤더 롱프레스 → 전체 해제 + SnackBar
+- **검증**: 오바댜 완독 상태에서 롱프레스 → 읽기 초기화, "오바댜 읽기 초기화됨" SnackBar 표시
+- **유형**: Widget
+
+### E-13. 책 헤더 롱프레스 시 아코디언 펼침 안 됨 (탭과 독립)
+- **검증**: 롱프레스 후 장 그리드가 펼쳐지지 않음 (onTap만 아코디언 제어)
+- **유형**: Widget
+
 ---
 
 ## F. 체크리스트 화면 — 진행률 연동 (5개)
@@ -207,8 +239,8 @@
 - **검증**: Scaffold `backgroundColor == AppColors.darkBg`
 - **유형**: Widget
 
-### G-02. 상단 "내 성경" 타이틀 + 진행률 뱃지 표시
-- **검증**: "내 성경" 텍스트 + "0 / 1189" 텍스트 존재
+### G-02. 상단 좌측 진행률 뱃지 + 우측 계정 아이콘 표시
+- **검증**: "0 / 1189" 텍스트 존재 + `Icons.person_outline` 아이콘 존재
 - **유형**: Widget
 
 ### G-03. 하단 "핀치로 확대 · 드래그로 이동" 힌트 표시
@@ -267,9 +299,21 @@
 - **검증**: 탭2에서 5장 체크 → 탭1 전환 → "5 / 1189" 표시
 - **유형**: Integration
 
-### I-05. BottomNavigationBar 아이템 2개 확인
-- **검증**: "내 성경" + "체크리스트" 라벨 존재
+### I-05. BottomNavigationBar 아이템 3개 확인
+- **검증**: "내 성경" + "체크리스트" + "설정" 라벨 존재
 - **유형**: Widget
+
+### I-06. 3D 뷰 계정 아이콘 탭 → 설정 탭 전환
+- **검증**: `Icons.person_outline` 탭 → SettingsScreen 렌더링
+- **유형**: Widget / Integration
+
+### I-07. 로그인 리다이렉트 — 미인증 시 로그인 화면 표시
+- **검증**: 로그인/게스트 모두 아닌 상태 → `/login` 리다이렉트
+- **유형**: Widget / Integration
+
+### I-08. 로그인 후 → 메인 화면 리다이렉트
+- **검증**: 인증 완료 상태에서 `/login` 접근 → `/bible` 리다이렉트
+- **유형**: Widget / Integration
 
 ---
 
@@ -303,12 +347,12 @@
 |---------|------|------|
 | A. BibleData (정적 데이터) | 7 | Unit |
 | B. BookProgress (모델) | 3 | Unit |
-| C. ProgressService (저장소) | 10 | Unit / Integration |
-| D. Providers (상태 관리) | 5 | Unit |
-| E. 체크리스트 UI 렌더링 | 10 | Widget |
+| C. ProgressService (저장소) | 13 | Unit / Integration |
+| D. Providers (상태 관리) | 7 | Unit |
+| E. 체크리스트 UI 렌더링 | 13 | Widget |
 | F. 체크리스트 진행률 연동 | 5 | Widget |
 | G. 3D 시각화 화면 UI | 4 | Widget |
 | H. IsometricBiblePainter | 6 | Unit |
-| I. 탭간 연동 / 내비게이션 | 5 | Widget / Integration |
+| I. 탭간 연동 / 내비게이션 | 8 | Widget / Integration |
 | J. 엣지 케이스 / 경계값 | 5 | Unit / Integration |
-| **합계** | **50** | |
+| **합계** | **71** | |
