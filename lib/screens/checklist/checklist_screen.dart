@@ -188,10 +188,10 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
                     _expandedBookIndex = isExpanded ? null : book.index;
                   });
                 },
-                onLongPress: () {
+                onLongPress: () async {
                   HapticFeedback.mediumImpact();
                   final willMarkRead = !isComplete;
-                  showDialog(
+                  final confirmed = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => AlertDialog(
                       shape: RoundedRectangleBorder(
@@ -216,29 +216,14 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
                       ),
                       actions: [
                         TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(),
+                          onPressed: () => Navigator.of(ctx).pop(false),
                           child: const Text(
                             '취소',
                             style: TextStyle(color: AppColors.textSecondary),
                           ),
                         ),
                         TextButton(
-                          onPressed: () {
-                            Navigator.of(ctx).pop();
-                            ref
-                                .read(progressProvider.notifier)
-                                .toggleAllChapters(book.index, book.chapters);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  willMarkRead
-                                      ? '${book.name} ${book.chapters}장 전체 읽음'
-                                      : '${book.name} 읽기 초기화됨',
-                                ),
-                                duration: const Duration(seconds: 2),
-                              ),
-                            );
-                          },
+                          onPressed: () => Navigator.of(ctx).pop(true),
                           child: Text(
                             willMarkRead ? '읽음 처리' : '해제',
                             style: const TextStyle(
@@ -248,6 +233,20 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
                           ),
                         ),
                       ],
+                    ),
+                  );
+                  if (confirmed != true || !context.mounted) return;
+                  ref
+                      .read(progressProvider.notifier)
+                      .toggleAllChapters(book.index, book.chapters);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        willMarkRead
+                            ? '${book.name} ${book.chapters}장 전체 읽음'
+                            : '${book.name} 읽기 초기화됨',
+                      ),
+                      duration: const Duration(seconds: 2),
                     ),
                   );
                 },
