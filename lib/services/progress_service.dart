@@ -78,6 +78,27 @@ class ProgressService {
     await prefs.setString(_storageKey, jsonEncode(encoded));
   }
 
+  /// 책 전체 장 토글. 완독 → 전체 해제, 미완독 → 전체 읽음
+  Future<Map<int, Set<int>>> toggleAllChapters(
+    Map<int, Set<int>> current,
+    int bookIndex,
+    int totalChapters,
+  ) async {
+    final updated = Map<int, Set<int>>.from(current);
+    final readChapters = updated[bookIndex] ?? {};
+
+    if (readChapters.length == totalChapters) {
+      updated.remove(bookIndex);
+    } else {
+      updated[bookIndex] = Set<int>.from(
+        List.generate(totalChapters, (i) => i + 1),
+      );
+    }
+
+    await _save(updated);
+    return updated;
+  }
+
   /// 전체 초기화
   Future<void> resetAll() async {
     final prefs = await SharedPreferences.getInstance();

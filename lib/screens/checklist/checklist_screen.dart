@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/bible_data.dart';
@@ -186,6 +187,23 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
                   setState(() {
                     _expandedBookIndex = isExpanded ? null : book.index;
                   });
+                },
+                onLongPress: () {
+                  HapticFeedback.mediumImpact();
+                  ref
+                      .read(progressProvider.notifier)
+                      .toggleAllChapters(book.index, book.chapters);
+                  final willMarkRead = !isComplete;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        willMarkRead
+                            ? '${book.name} ${book.chapters}장 전체 읽음'
+                            : '${book.name} 읽기 초기화됨',
+                      ),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
                 },
                 borderRadius: BorderRadius.circular(12),
                 child: Padding(

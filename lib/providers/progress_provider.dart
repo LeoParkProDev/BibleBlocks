@@ -34,6 +34,14 @@ class ProgressNotifier extends AsyncNotifier<Map<int, Set<int>>> {
     final updated = await service.toggleChapter(current, bookIndex, chapter);
     state = AsyncValue.data(updated);
   }
+
+  Future<void> toggleAllChapters(int bookIndex, int totalChapters) async {
+    final service = ref.read(progressServiceProvider);
+    final current = state.value ?? {};
+    final updated =
+        await service.toggleAllChapters(current, bookIndex, totalChapters);
+    state = AsyncValue.data(updated);
+  }
 }
 
 /// 전체 읽은 장 수
