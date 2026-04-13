@@ -5,7 +5,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../data/bible_data.dart';
 
 class ProgressService {
-  static const _storageKey = 'bible_progress';
+  static const _guestKey = 'bible_progress';
+
+  final String? userId;
+
+  ProgressService({this.userId});
+
+  String get _storageKey =>
+      userId != null ? 'bible_progress_$userId' : _guestKey;
 
   /// 모든 책의 읽은 장 데이터 로드. key: bookIndex, value: 읽은 장 Set
   Future<Map<int, Set<int>>> loadAll() async {
@@ -46,6 +53,20 @@ class ProgressService {
 
     await _save(updated);
     return updated;
+  }
+
+  /// 게스트 데이터를 유저 키로 마이그레이션.
+  /// 게스트 데이터가 있고 유저 데이터가 없을 때만 복사.
+  Future<void> migrateGuestData(String targetUserId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final guestRaw = prefs.getString(_guestKey);
+    if (guestRaw == null) return;
+
+    final userKey = 'bible_progress_$targetUserId';
+    final userRaw = prefs.getString(userKey);
+    if (userRaw != null) return;
+
+    await prefs.setString(userKey, guestRaw);
   }
 
   Future<void> _save(Map<int, Set<int>> data) async {
