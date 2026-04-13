@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/bible_data.dart';
@@ -11,18 +12,46 @@ class ProgressService {
 
   ProgressService({this.userId});
 
-  String get _storageKey =>
-      userId != null ? 'bible_progress_$userId' : _guestKey;
+  bool get _isLoggedIn => userId != null;
+
+  String get _localStorageKey =>
+      _isLoggedIn ? 'bible_progress_$userId' : _guestKey;
+
+  DocumentReference? get _userDoc => _isLoggedIn
+      ? FirebaseFirestore.instance.collection('users').doc(userId)
+      : null;
 
   /// 모든 책의 읽은 장 데이터 로드. key: bookIndex, value: 읽은 장 Set
   Future<Map<int, Set<int>>> loadAll() async {
+    if (_isLoggedIn) {
+      return _loadFromFirestore();
+    }
+    return _loadFromLocal();
+  }
+
+  Future<Map<int, Set<int>>> _loadFromFirestore() async {
+    final doc = await _userDoc!.get();
+    if (!doc.exists) return {};
+
+    final data = doc.data() as Map<String, dynamic>?;
+    final progress = data?['progress'] as Map<String, dynamic>?;
+    if (progress == null) return {};
+
+    return _decodeProgress(progress);
+  }
+
+  Future<Map<int, Set<int>>> _loadFromLocal() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_storageKey);
+    final raw = prefs.getString(_localStorageKey);
     if (raw == null) return {};
 
     final Map<String, dynamic> decoded = jsonDecode(raw);
+    return _decodeProgress(decoded);
+  }
+
+  Map<int, Set<int>> _decodeProgress(Map<String, dynamic> raw) {
     final result = <int, Set<int>>{};
-    for (final entry in decoded.entries) {
+    for (final entry in raw.entries) {
       final bookIndex = int.parse(entry.key);
       final chapters = (entry.value as List).cast<int>().toSet();
       result[bookIndex] = chapters;
@@ -55,29 +84,6 @@ class ProgressService {
     return updated;
   }
 
-  /// 게스트 데이터를 유저 키로 마이그레이션.
-  /// 게스트 데이터가 있고 유저 데이터가 없을 때만 복사.
-  Future<void> migrateGuestData(String targetUserId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final guestRaw = prefs.getString(_guestKey);
-    if (guestRaw == null) return;
-
-    final userKey = 'bible_progress_$targetUserId';
-    final userRaw = prefs.getString(userKey);
-    if (userRaw != null) return;
-
-    await prefs.setString(userKey, guestRaw);
-  }
-
-  Future<void> _save(Map<int, Set<int>> data) async {
-    final prefs = await SharedPreferences.getInstance();
-    final encoded = <String, dynamic>{};
-    for (final entry in data.entries) {
-      encoded[entry.key.toString()] = entry.value.toList()..sort();
-    }
-    await prefs.setString(_storageKey, jsonEncode(encoded));
-  }
-
   /// 책 전체 장 토글. 완독 → 전체 해제, 미완독 → 전체 읽음
   Future<Map<int, Set<int>>> toggleAllChapters(
     Map<int, Set<int>> current,
@@ -99,10 +105,56 @@ class ProgressService {
     return updated;
   }
 
+  /// 게스트 데이터를 유저 키로 마이그레이션.
+  /// 게스트 로컬 데이터가 있고 Firestore에 데이터가 없을 때만 복사.
+  Future<void> migrateGuestData(String targetUserId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final guestRaw = prefs.getString(_guestKey);
+    if (guestRaw == null) return;
+
+    final userDoc = FirebaseFirestore.instance
+        .collection('users')
+        .doc(targetUserId);
+    final snapshot = await userDoc.get();
+    if (snapshot.exists) return;
+
+    final Map<String, dynamic> decoded = jsonDecode(guestRaw);
+    await userDoc.set({
+      'progress': decoded,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> _save(Map<int, Set<int>> data) async {
+    final encoded = _encodeProgress(data);
+
+    if (_isLoggedIn) {
+      await _userDoc!.set({
+        'progress': encoded,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } else {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_localStorageKey, jsonEncode(encoded));
+    }
+  }
+
+  Map<String, dynamic> _encodeProgress(Map<int, Set<int>> data) {
+    final encoded = <String, dynamic>{};
+    for (final entry in data.entries) {
+      encoded[entry.key.toString()] = entry.value.toList()..sort();
+    }
+    return encoded;
+  }
+
   /// 전체 초기화
   Future<void> resetAll() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_storageKey);
+    if (_isLoggedIn) {
+      await _userDoc!.delete();
+    } else {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_localStorageKey);
+    }
   }
 
   /// 전체 읽은 장 수 계산

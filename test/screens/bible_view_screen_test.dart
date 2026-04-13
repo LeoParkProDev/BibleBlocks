@@ -26,12 +26,12 @@ void main() {
   });
 
   // G-02
-  testWidgets('G-02: 상단 "내 성경" 타이틀 + 진행률 뱃지', (tester) async {
+  testWidgets('G-02: 상단 좌측 진행률 뱃지 + 우측 계정 아이콘', (tester) async {
     await tester.pumpWidget(buildTestApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('내 성경'), findsOneWidget);
     expect(find.textContaining('0 / 1189'), findsOneWidget);
+    expect(find.byIcon(Icons.person_outline), findsOneWidget);
   });
 
   // G-03

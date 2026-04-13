@@ -1,7 +1,7 @@
-# BibleBlocks 필수 테스트 시나리오 (61개)
+# BibleBlocks 필수 테스트 시나리오 (75개)
 
 > 각 시나리오는 `[카테고리-번호]` 형식으로 관리.
-> 상태: 50개 구현 완료 + 11개 신규 추가 (2026-04-13)
+> 상태: 50개 구현 완료 + 25개 신규 추가 (2026-04-13)
 >
 > **테스트 파일 매핑**:
 > - A: `test/data/bible_data_test.dart`
@@ -121,7 +121,25 @@
 
 ---
 
-## D. Providers — 상태 관리 (5개)
+### C-14. 로그인 유저 — Firestore에 저장/로드
+- **검증**: userId 있는 상태에서 `toggleChapter` → Firestore `users/{userId}` 문서에 저장, `loadAll()` 시 Firestore에서 로드
+- **유형**: Integration
+
+### C-15. 게스트 유저 — SharedPreferences에 저장/로드 (기존 동작 유지)
+- **검증**: userId null 상태에서 `toggleChapter` → SharedPreferences에 저장, `loadAll()` 시 로컬에서 로드
+- **유형**: Integration
+
+### C-16. 기기 간 동기화 — 같은 userId로 다른 기기에서 데이터 공유
+- **검증**: 기기A에서 체크 → 기기B에서 같은 계정 로그인 → 동일 데이터 로드
+- **유형**: E2E (수동)
+
+### C-17. 게스트→로그인 마이그레이션 — Firestore로 복사
+- **검증**: 게스트 로컬 데이터 존재 + Firestore 데이터 없음 → 로그인 시 Firestore에 복사
+- **유형**: Integration
+
+---
+
+## D. Providers — 상태 관리 (7개)
 
 ### D-01. progressProvider 초기 상태 AsyncLoading → AsyncData
 - **검증**: 로딩 후 `AsyncValue.data({})` 상태
@@ -347,7 +365,7 @@
 |---------|------|------|
 | A. BibleData (정적 데이터) | 7 | Unit |
 | B. BookProgress (모델) | 3 | Unit |
-| C. ProgressService (저장소) | 13 | Unit / Integration |
+| C. ProgressService (저장소) | 17 | Unit / Integration / E2E |
 | D. Providers (상태 관리) | 7 | Unit |
 | E. 체크리스트 UI 렌더링 | 13 | Widget |
 | F. 체크리스트 진행률 연동 | 5 | Widget |
@@ -355,4 +373,4 @@
 | H. IsometricBiblePainter | 6 | Unit |
 | I. 탭간 연동 / 내비게이션 | 8 | Widget / Integration |
 | J. 엣지 케이스 / 경계값 | 5 | Unit / Integration |
-| **합계** | **71** | |
+| **합계** | **75** | |

@@ -3,6 +3,21 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:bible_blocks/app.dart';
+import 'package:bible_blocks/providers/auth_provider.dart';
+
+class _AlwaysGuestNotifier extends IsGuestNotifier {
+  @override
+  bool build() => true;
+}
+
+Widget buildTestApp() {
+  return ProviderScope(
+    overrides: [
+      isGuestProvider.overrideWith(() => _AlwaysGuestNotifier()),
+    ],
+    child: const BibleBlocksApp(),
+  );
+}
 
 /// BottomNavigationBar 안의 특정 탭을 찾아서 탭
 Future<void> tapNavTab(WidgetTester tester, String label) async {
@@ -19,14 +34,15 @@ void main() {
 
   // I-01
   testWidgets('I-01: 앱 시작 시 탭1 (내 성경) 표시', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: BibleBlocksApp()));
+    await tester.pumpWidget(buildTestApp());
     await tester.pumpAndSettle();
+    // BottomNavigationBar에 '내 성경' 라벨 존재
     expect(find.text('내 성경'), findsWidgets);
   });
 
   // I-02
   testWidgets('I-02: 탭2 (체크리스트) 전환', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: BibleBlocksApp()));
+    await tester.pumpWidget(buildTestApp());
     await tester.pumpAndSettle();
 
     await tapNavTab(tester, '체크리스트');
@@ -36,7 +52,7 @@ void main() {
 
   // I-03
   testWidgets('I-03: 탭 전환 시 상태 유지 (StatefulShellRoute)', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: BibleBlocksApp()));
+    await tester.pumpWidget(buildTestApp());
     await tester.pumpAndSettle();
 
     // 탭2로 이동
@@ -58,7 +74,7 @@ void main() {
 
   // I-04
   testWidgets('I-04: 탭2 체크 → 탭1 진행률 반영', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: BibleBlocksApp()));
+    await tester.pumpWidget(buildTestApp());
     await tester.pumpAndSettle();
 
     // 탭2로 이동
@@ -85,7 +101,7 @@ void main() {
 
   // I-05
   testWidgets('I-05: BottomNavigationBar 아이템 3개', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: BibleBlocksApp()));
+    await tester.pumpWidget(buildTestApp());
     await tester.pumpAndSettle();
 
     final navBar = tester.widget<BottomNavigationBar>(

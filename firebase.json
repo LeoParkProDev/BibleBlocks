@@ -1,0 +1,26 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "bible-blocks-app",
+          "appId": "1:42035438384:android:7fb477fc44f77c3d4a9ef5",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "bible-blocks-app",
+          "configurations": {
+            "android": "1:42035438384:android:7fb477fc44f77c3d4a9ef5",
+            "web": "1:42035438384:web:b5e7ec7d72c8d3964a9ef5"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  }
+}
