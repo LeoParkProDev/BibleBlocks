@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/bible_data.dart';
+import '../../models/bible_model.dart';
+import '../../providers/model_provider.dart';
 import '../../providers/progress_provider.dart';
 import '../../theme/app_colors.dart';
 
@@ -11,6 +13,7 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final totalRead = ref.watch(totalReadProvider);
+    final selectedModel = ref.watch(modelProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('설정')),
@@ -54,6 +57,62 @@ class SettingsScreen extends ConsumerWidget {
                         color: AppColors.textSecondary,
                       ),
                     ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // 3D 모델 선택
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(16, 14, 16, 4),
+                      child: Text(
+                        '3D 모델',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                    ...BibleModelType.values.map((type) {
+                      final isSelected = type == selectedModel;
+                      return ListTile(
+                        leading: Icon(
+                          type.icon,
+                          size: 22,
+                          color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                        ),
+                        title: Text(
+                          type.label,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        subtitle: Text(
+                          type.description,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        trailing: isSelected
+                            ? const Icon(Icons.check_circle, color: AppColors.primary, size: 20)
+                            : const Icon(Icons.circle_outlined, color: AppColors.border, size: 20),
+                        onTap: () => ref.read(modelProvider.notifier).set(type),
+                      );
+                    }),
                   ],
                 ),
               ),

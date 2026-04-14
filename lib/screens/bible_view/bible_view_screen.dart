@@ -6,8 +6,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../data/bible_data.dart';
+import '../../models/bible_model.dart';
 import '../../painters/block_hit_test.dart';
 import '../../painters/isometric_bible_painter.dart';
+import '../../painters/noahs_ark_hit_test.dart';
+import '../../painters/noahs_ark_painter.dart';
+import '../../painters/solomons_temple_hit_test.dart';
+import '../../painters/solomons_temple_painter.dart' show SolomonsTemplePainter, templeVoxels;
+import '../../providers/model_provider.dart';
 import '../../providers/progress_provider.dart';
 import '../../services/progress_service.dart';
 import '../../theme/app_colors.dart';
@@ -104,11 +110,84 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
     _rotationController.stop();
   }
 
+  BlockCoord? _hitTest(Offset scenePos) {
+    return switch (ref.read(modelProvider)) {
+      BibleModelType.book => _hitTest(scenePos),
+      BibleModelType.noahsArk => NoahsArkHitTest.hitTest(scenePos, _canvasSize, _rotationAngle),
+      BibleModelType.solomonsTemple => SolomonsTempleHitTest.hitTest(scenePos, _canvasSize, _rotationAngle),
+    };
+  }
+
+  int _toBlockIndex(BlockCoord coord) {
+    return switch (ref.read(modelProvider)) {
+      BibleModelType.book => BlockHitTest.toBlockIndex(coord),
+      BibleModelType.noahsArk => NoahsArkHitTest.toBlockIndex(coord),
+      BibleModelType.solomonsTemple => SolomonsTempleHitTest.toBlockIndex(coord),
+    };
+  }
+
+  String _tooltipText(int blockIndex) {
+    return switch (ref.read(modelProvider)) {
+      BibleModelType.book => BlockHitTest.tooltipText(blockIndex, _latestProgressData),
+      BibleModelType.noahsArk => NoahsArkHitTest.tooltipText(blockIndex, _latestProgressData),
+      BibleModelType.solomonsTemple => SolomonsTempleHitTest.tooltipText(blockIndex, _latestProgressData),
+    };
+  }
+
+  Offset _blockTopCenter(BlockCoord coord) {
+    return switch (ref.read(modelProvider)) {
+      BibleModelType.book => BlockHitTest.blockTopCenter(coord, _canvasSize, _rotationAngle),
+      BibleModelType.noahsArk => NoahsArkHitTest.blockTopCenter(coord, _canvasSize, _rotationAngle),
+      BibleModelType.solomonsTemple => SolomonsTempleHitTest.blockTopCenter(coord, _canvasSize, _rotationAngle),
+    };
+  }
+
+  CustomPainter _buildPainter(BibleModelType modelType, Map<int, Set<int>> data) {
+    return switch (modelType) {
+      BibleModelType.book => IsometricBiblePainter(
+            progressData: data,
+            glowAnimation: _glowController.value,
+            hoveredBlock: _hoveredBlock,
+            pressedBlock: _pressedBlock,
+            bounceAnimation: _bounceController.value,
+            cursorScenePos: _cursorScenePos,
+            rotationAngle: _rotationAngle,
+            newlyFilledBlocks: _newlyFilledBlocks,
+            fillAnimation: _fillController.value,
+            introAnimation: _introController.value,
+          ),
+      BibleModelType.noahsArk => NoahsArkPainter(
+            progressData: data,
+            glowAnimation: _glowController.value,
+            hoveredBlock: _hoveredBlock,
+            pressedBlock: _pressedBlock,
+            bounceAnimation: _bounceController.value,
+            cursorScenePos: _cursorScenePos,
+            rotationAngle: _rotationAngle,
+            newlyFilledBlocks: _newlyFilledBlocks,
+            fillAnimation: _fillController.value,
+            introAnimation: _introController.value,
+          ),
+      BibleModelType.solomonsTemple => SolomonsTemplePainter(
+            progressData: data,
+            glowAnimation: _glowController.value,
+            hoveredBlock: _hoveredBlock,
+            pressedBlock: _pressedBlock,
+            bounceAnimation: _bounceController.value,
+            cursorScenePos: _cursorScenePos,
+            rotationAngle: _rotationAngle,
+            newlyFilledBlocks: _newlyFilledBlocks,
+            fillAnimation: _fillController.value,
+            introAnimation: _introController.value,
+          ),
+    };
+  }
+
   void _onPointerHover(PointerHoverEvent event) {
     if (_introController.isAnimating) return;
     if (_canvasSize == Size.zero) return;
     final scenePos = _transformController.toScene(event.localPosition);
-    final hit = BlockHitTest.hitTest(scenePos, _canvasSize, _rotationAngle);
+    final hit = _hitTest(scenePos);
     setState(() {
       _hoveredBlock = hit;
       _cursorScenePos = scenePos;
@@ -133,7 +212,7 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
     final distance = (event.localPosition - _pointerDownPos!).distance;
     if (distance < 10 && _canvasSize != Size.zero) {
       final scenePos = _transformController.toScene(event.localPosition);
-      final hit = BlockHitTest.hitTest(scenePos, _canvasSize, _rotationAngle);
+      final hit = _hitTest(scenePos);
       if (hit != null) {
         _handleBlockTap(hit);
       }
@@ -158,11 +237,11 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
   }
 
   Widget _buildTooltip() {
-    final blockIndex = BlockHitTest.toBlockIndex(_hoveredBlock!);
-    final text = BlockHitTest.tooltipText(blockIndex, _latestProgressData);
+    final blockIndex = _toBlockIndex(_hoveredBlock!);
+    final text = _tooltipText(blockIndex);
     if (text.isEmpty) return const SizedBox.shrink();
 
-    final canvasPos = BlockHitTest.blockTopCenter(_hoveredBlock!, _canvasSize, _rotationAngle);
+    final canvasPos = _blockTopCenter(_hoveredBlock!);
     final screenPos =
         MatrixUtils.transformPoint(_transformController.value, canvasPos);
 
@@ -198,6 +277,7 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
     final progressAsync = ref.watch(progressProvider);
     final totalRead = ref.watch(totalReadProvider);
     final overallProgress = ref.watch(overallProgressProvider);
+    final modelType = ref.watch(modelProvider);
 
     return Scaffold(
       backgroundColor: AppColors.darkBg,
@@ -216,8 +296,17 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
                 }
                 if (_previousProgressData.isNotEmpty && data != _previousProgressData) {
                   final newBlocks = <int>{};
-                  for (int i = 0; i < IsometricBiblePainter.totalPageBlocks; i++) {
-                    final range = BlockHitTest.blockChapterRange(i);
+                  final totalBlocks = switch (modelType) {
+                    BibleModelType.book => IsometricBiblePainter.totalPageBlocks,
+                    BibleModelType.noahsArk => ArkVoxels.structuralCount,
+                    BibleModelType.solomonsTemple => templeVoxels.length,
+                  };
+                  for (int i = 0; i < totalBlocks; i++) {
+                    final range = switch (modelType) {
+                      BibleModelType.book => BlockHitTest.blockChapterRange(i),
+                      BibleModelType.noahsArk => NoahsArkHitTest.blockChapterRange(i),
+                      BibleModelType.solomonsTemple => SolomonsTempleHitTest.blockChapterRange(i),
+                    };
                     bool wasFullBefore = true;
                     bool isFullNow = true;
                     for (int g = range.globalStart; g < range.globalEnd; g++) {
@@ -258,18 +347,7 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
                                   constraints.maxWidth, constraints.maxHeight);
                               return SizedBox.expand(
                                 child: CustomPaint(
-                                  painter: IsometricBiblePainter(
-                                    progressData: data,
-                                    glowAnimation: _glowController.value,
-                                    hoveredBlock: _hoveredBlock,
-                                    pressedBlock: _pressedBlock,
-                                    bounceAnimation: _bounceController.value,
-                                    cursorScenePos: _cursorScenePos,
-                                    rotationAngle: _rotationAngle,
-                                    newlyFilledBlocks: _newlyFilledBlocks,
-                                    fillAnimation: _fillController.value,
-                                    introAnimation: _introController.value,
-                                  ),
+                                  painter: _buildPainter(modelType, data),
                                 ),
                               );
                             },
