@@ -201,7 +201,7 @@ class SettingsScreen extends ConsumerWidget {
           percent: percent,
           totalRead: totalRead,
           totalChapters: BibleData.totalChapters,
-          imageUrl: 'https://bible-blocks-omega.vercel.app/icons/Icon-512.png',
+          imageUrl: 'https://bible-blocks-omega.vercel.app/share_card.png?v=5',
           webUrl: 'https://bible-blocks-omega.vercel.app',
         );
       } else {
