@@ -45,3 +45,11 @@ app.*.map.json
 /android/app/release
 .vercel
 .env*.local
+
+# Android release signing
+android/key.properties
+*.jks
+
+# Firebase / Google API keys
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
