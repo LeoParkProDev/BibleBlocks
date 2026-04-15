@@ -356,7 +356,7 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
 
   void _showProfileDialog(BuildContext context) {
     final user = ref.read(authProvider).value;
-    final isGuest = ref.read(isGuestProvider);
+    final isGuest = ref.read(isGuestProvider).value ?? false;
 
     showDialog(
       context: context,

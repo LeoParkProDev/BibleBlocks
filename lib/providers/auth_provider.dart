@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/kakao_user_info.dart';
 import '../services/auth_service.dart';
@@ -45,11 +46,20 @@ final isLoggedInProvider = Provider<bool>((ref) {
 });
 
 final isGuestProvider =
-    NotifierProvider<IsGuestNotifier, bool>(IsGuestNotifier.new);
+    AsyncNotifierProvider<IsGuestNotifier, bool>(IsGuestNotifier.new);
 
-class IsGuestNotifier extends Notifier<bool> {
+class IsGuestNotifier extends AsyncNotifier<bool> {
+  static const _key = 'is_guest_mode';
+
   @override
-  bool build() => false;
+  Future<bool> build() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_key) ?? false;
+  }
 
-  void set(bool value) => state = value;
+  Future<void> set(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_key, value);
+    state = AsyncValue.data(value);
+  }
 }

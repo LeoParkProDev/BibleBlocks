@@ -187,7 +187,7 @@ class SettingsScreen extends ConsumerWidget {
   Future<void> _shareProgress(BuildContext context, WidgetRef ref) async {
     final progressData = ref.read(progressProvider).value ?? {};
     final user = ref.read(authProvider).value;
-    final isGuest = ref.read(isGuestProvider);
+    final isGuest = ref.read(isGuestProvider).value ?? false;
     final nickname = isGuest ? '게스트' : (user?.nickname ?? '사용자');
 
     try {

@@ -27,5 +27,5 @@ void main() {
 
 class _AlwaysGuestNotifier extends IsGuestNotifier {
   @override
-  bool build() => true;
+  Future<bool> build() async => true;
 }

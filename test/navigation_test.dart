@@ -7,7 +7,7 @@ import 'package:bible_blocks/providers/auth_provider.dart';
 
 class _AlwaysGuestNotifier extends IsGuestNotifier {
   @override
-  bool build() => true;
+  Future<bool> build() async => true;
 }
 
 Widget buildTestApp() {

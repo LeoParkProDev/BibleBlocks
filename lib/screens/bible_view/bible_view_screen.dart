@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,9 +14,13 @@ import '../../painters/noahs_ark_hit_test.dart';
 import '../../painters/noahs_ark_painter.dart';
 import '../../painters/solomons_temple_hit_test.dart';
 import '../../painters/solomons_temple_painter.dart' show SolomonsTemplePainter, templeVoxels;
+import '../../providers/auth_provider.dart';
 import '../../providers/model_provider.dart';
 import '../../providers/progress_provider.dart';
 import '../../services/progress_service.dart';
+import '../../services/share_service.dart';
+import '../../services/share_service_web.dart'
+    if (dart.library.io) '../../services/share_service_stub.dart' as platform;
 import '../../theme/app_colors.dart';
 
 class BibleViewScreen extends ConsumerStatefulWidget {
@@ -236,6 +241,39 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
     });
   }
 
+  Future<void> _shareProgress() async {
+    final progressData = ref.read(progressProvider).value ?? {};
+    final user = ref.read(authProvider).value;
+    final isGuest = ref.read(isGuestProvider).value ?? false;
+    final nickname = isGuest ? '게스트' : (user?.nickname ?? '사용자');
+    final totalRead = ProgressService.totalRead(progressData);
+    final percent = (totalRead / BibleData.totalChapters * 100).round();
+
+    try {
+      if (kIsWeb) {
+        platform.shareViaKakao(
+          nickname: nickname,
+          percent: percent,
+          totalRead: totalRead,
+          totalChapters: BibleData.totalChapters,
+          imageUrl: 'https://bible-blocks-omega.vercel.app/share_card.png?v=5',
+          webUrl: 'https://bible-blocks-omega.vercel.app',
+        );
+      } else {
+        await ShareService.shareProgress(
+          progressData: progressData,
+          nickname: nickname,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('공유 실패: $e')),
+        );
+      }
+    }
+  }
+
   Widget _buildTooltip() {
     final blockIndex = _toBlockIndex(_hoveredBlock!);
     final text = _tooltipText(blockIndex);
@@ -387,6 +425,23 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
                         color: AppColors.gold,
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => _shareProgress(),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: const Icon(
+                        Icons.share,
+                        color: AppColors.gold,
+                        size: 18,
                       ),
                     ),
                   ),

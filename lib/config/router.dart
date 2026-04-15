@@ -10,14 +10,32 @@ import '../screens/settings/settings_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
+/// Auth + Guest 상태 변화를 GoRouter에 알려주는 Listenable
+final _routerListenableProvider = Provider<ValueNotifier<int>>((ref) {
+  final notifier = ValueNotifier(0);
+  ref.listen(authProvider, (_, __) => notifier.value++);
+  ref.listen(isGuestProvider, (_, __) => notifier.value++);
+  return notifier;
+});
+
 final routerProvider = Provider<GoRouter>((ref) {
-  final isLoggedIn = ref.watch(isLoggedInProvider);
-  final isGuest = ref.watch(isGuestProvider);
+  final listenable = ref.watch(_routerListenableProvider);
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/bible',
+    refreshListenable: listenable,
     redirect: (context, state) {
+      final authState = ref.read(authProvider);
+      final guestState = ref.read(isGuestProvider);
+
+      // 로딩 중이면 리다이렉트 없음
+      if (authState is AsyncLoading || guestState is AsyncLoading) {
+        return null;
+      }
+
+      final isLoggedIn = authState.value != null;
+      final isGuest = guestState.value ?? false;
       final goingToLogin = state.matchedLocation == '/login';
 
       if (!isLoggedIn && !isGuest) {
