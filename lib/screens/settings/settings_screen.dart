@@ -1,10 +1,16 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/bible_data.dart';
 import '../../models/bible_model.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/model_provider.dart';
 import '../../providers/progress_provider.dart';
+import '../../services/progress_service.dart';
+import '../../services/share_service.dart';
+import '../../services/share_service_web.dart'
+    if (dart.library.io) '../../services/share_service_stub.dart' as platform;
 import '../../theme/app_colors.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -58,6 +64,35 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                     ),
                   ],
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // 공유하기 버튼
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: ListTile(
+                  leading: const Icon(Icons.share, color: AppColors.gold),
+                  title: const Text(
+                    '카카오톡으로 공유하기',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  subtitle: const Text(
+                    '3D 성경책과 진행도를 친구에게 공유해보세요',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  onTap: () => _shareProgress(context, ref),
                 ),
               ),
 
@@ -147,6 +182,42 @@ class SettingsScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _shareProgress(BuildContext context, WidgetRef ref) async {
+    final progressData = ref.read(progressProvider).value ?? {};
+    final user = ref.read(authProvider).value;
+    final isGuest = ref.read(isGuestProvider);
+    final nickname = isGuest ? '게스트' : (user?.nickname ?? '사용자');
+
+    try {
+      final totalRead = ProgressService.totalRead(progressData);
+      final percent = (totalRead / BibleData.totalChapters * 100).round();
+
+      if (kIsWeb) {
+        // 웹: 카카오톡 공유
+        platform.shareViaKakao(
+          nickname: nickname,
+          percent: percent,
+          totalRead: totalRead,
+          totalChapters: BibleData.totalChapters,
+          imageUrl: 'https://bible-blocks-omega.vercel.app/icons/Icon-512.png',
+          webUrl: 'https://bible-blocks-omega.vercel.app',
+        );
+      } else {
+        // 모바일: 네이티브 공유 시트
+        await ShareService.shareProgress(
+          progressData: progressData,
+          nickname: nickname,
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('공유 실패: $e')),
+        );
+      }
+    }
   }
 
   void _showResetDialog(BuildContext context, WidgetRef ref) {

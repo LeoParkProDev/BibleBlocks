@@ -29,8 +29,32 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>bible_blocks</title>
+  <title>바이블블록</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Kakao JS SDK -->
+  <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js"></script>
+  <script>
+    Kakao.init('5cf3f493b53a15dca87ca6e0bf9884c1');
+
+    function _kakaoShareSendDefault(nickname, percent, totalRead, totalChapters, imageUrl, webUrl) {
+      Kakao.Share.sendDefault({
+        objectType: 'feed',
+        content: {
+          title: nickname + '의 바이블블록',
+          description: '진척도: ' + percent + '% (' + totalRead + '/' + totalChapters + '장)',
+          imageUrl: imageUrl,
+          link: { webUrl: webUrl, mobileWebUrl: webUrl },
+        },
+        buttons: [
+          {
+            title: '바이블블록 시작하기',
+            link: { webUrl: webUrl, mobileWebUrl: webUrl },
+          },
+        ],
+      });
+    }
+  </script>
 </head>
 <body>
   <!--
