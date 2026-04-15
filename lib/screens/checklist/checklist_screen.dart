@@ -188,12 +188,57 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
                     _expandedBookIndex = isExpanded ? null : book.index;
                   });
                 },
-                onLongPress: () {
+                onLongPress: () async {
                   HapticFeedback.mediumImpact();
+                  final willMarkRead = !isComplete;
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      title: Text(
+                        willMarkRead ? '전체 읽음 처리' : '읽음 해제',
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      content: Text(
+                        willMarkRead
+                            ? '${book.name} ${book.chapters}장 전체를 읽음 처리하시겠습니까?'
+                            : '${book.name} 읽음 기록을 모두 해제하시겠습니까?',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(false),
+                          child: const Text(
+                            '취소',
+                            style: TextStyle(color: AppColors.textSecondary),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(true),
+                          child: Text(
+                            willMarkRead ? '읽음 처리' : '해제',
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed != true || !context.mounted) return;
                   ref
                       .read(progressProvider.notifier)
                       .toggleAllChapters(book.index, book.chapters);
-                  final willMarkRead = !isComplete;
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
@@ -397,8 +442,8 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 7,
-        mainAxisSpacing: 6,
-        crossAxisSpacing: 6,
+        mainAxisSpacing: 4,
+        crossAxisSpacing: 4,
         childAspectRatio: 1,
       ),
       itemCount: book.chapters,
@@ -407,6 +452,7 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
         final isRead = readChapters.contains(chapter);
 
         return GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: () {
             ref
                 .read(progressProvider.notifier)
