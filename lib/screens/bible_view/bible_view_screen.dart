@@ -206,7 +206,6 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
             painter: PilgrimC3ProStaticPainter(
               readChapters: readChapters,
               introAnimation: intro,
-              rotationAngle: _rotationAngle,
             ),
           ),
         ),
@@ -214,7 +213,6 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
           painter: PilgrimC3ProOverlayPainter(
             glowAnimation: _glowController.value,
             readChapters: readChapters,
-            rotationAngle: _rotationAngle,
           ),
         ),
       ],
@@ -522,52 +520,62 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
               bottom: 16,
               left: 0,
               right: 0,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  GestureDetector(
-                    onLongPressStart: (_) => _startRotation(-1),
-                    onLongPressEnd: (_) => _stopRotation(),
-                    onTapDown: (_) => _startRotation(-1),
-                    onTapUp: (_) => _stopRotation(),
-                    onTapCancel: _stopRotation,
-                    child: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(24),
+              child: modelType == BibleModelType.pilgrimMountain
+                  ? Center(
+                      child: Text(
+                        '핀치로 확대 · 드래그로 이동',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.3),
+                          fontSize: 12,
+                        ),
                       ),
-                      child: const Icon(Icons.rotate_left, color: Colors.white54, size: 24),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        GestureDetector(
+                          onLongPressStart: (_) => _startRotation(-1),
+                          onLongPressEnd: (_) => _stopRotation(),
+                          onTapDown: (_) => _startRotation(-1),
+                          onTapUp: (_) => _stopRotation(),
+                          onTapCancel: _stopRotation,
+                          child: Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            child: const Icon(Icons.rotate_left, color: Colors.white54, size: 24),
+                          ),
+                        ),
+                        const SizedBox(width: 24),
+                        Text(
+                          '핀치로 확대 · 드래그로 이동',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.3),
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(width: 24),
+                        GestureDetector(
+                          onLongPressStart: (_) => _startRotation(1),
+                          onLongPressEnd: (_) => _stopRotation(),
+                          onTapDown: (_) => _startRotation(1),
+                          onTapUp: (_) => _stopRotation(),
+                          onTapCancel: _stopRotation,
+                          child: Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            child: const Icon(Icons.rotate_right, color: Colors.white54, size: 24),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 24),
-                  Text(
-                    '핀치로 확대 · 드래그로 이동',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.3),
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(width: 24),
-                  GestureDetector(
-                    onLongPressStart: (_) => _startRotation(1),
-                    onLongPressEnd: (_) => _stopRotation(),
-                    onTapDown: (_) => _startRotation(1),
-                    onTapUp: (_) => _stopRotation(),
-                    onTapCancel: _stopRotation,
-                    child: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      child: const Icon(Icons.rotate_right, color: Colors.white54, size: 24),
-                    ),
-                  ),
-                ],
-              ),
             ),
           ],
         ),
