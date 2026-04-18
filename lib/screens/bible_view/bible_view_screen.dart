@@ -206,6 +206,7 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
             painter: PilgrimC3ProStaticPainter(
               readChapters: readChapters,
               introAnimation: intro,
+              rotationAngle: _rotationAngle,
             ),
           ),
         ),
@@ -213,6 +214,7 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
           painter: PilgrimC3ProOverlayPainter(
             glowAnimation: _glowController.value,
             readChapters: readChapters,
+            rotationAngle: _rotationAngle,
           ),
         ),
       ],

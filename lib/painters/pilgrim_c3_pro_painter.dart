@@ -281,15 +281,23 @@ void _drawSky(Canvas canvas, Size size, double progress) {
 class PilgrimC3ProStaticPainter extends CustomPainter {
   final int readChapters;
   final double introAnimation;
+  final double rotationAngle;
   const PilgrimC3ProStaticPainter({
     required this.readChapters,
     required this.introAnimation,
+    this.rotationAngle = 0.0,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     final progress = _progressFor(readChapters);
     _drawSky(canvas, size, progress);
+
+    final center = Offset(size.width / 2, size.height / 2);
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(rotationAngle);
+    canvas.translate(-center.dx, -center.dy);
 
     final origin = _sceneOrigin(size);
     final litStones = _litStonesFor(readChapters);
@@ -319,12 +327,15 @@ class PilgrimC3ProStaticPainter extends CustomPainter {
       if (lit < _litCullThreshold) continue;
       _drawVoxel(canvas, v, origin, lit);
     }
+
+    canvas.restore();
   }
 
   @override
   bool shouldRepaint(covariant PilgrimC3ProStaticPainter old) =>
       old.readChapters != readChapters ||
-      old.introAnimation != introAnimation;
+      old.introAnimation != introAnimation ||
+      old.rotationAngle != rotationAngle;
 }
 
 // ---------------------------------------------------------------------------
@@ -347,9 +358,11 @@ const _landmarkLabels = [
 class PilgrimC3ProOverlayPainter extends CustomPainter {
   final double glowAnimation;
   final int readChapters;
+  final double rotationAngle;
   const PilgrimC3ProOverlayPainter({
     required this.glowAnimation,
     required this.readChapters,
+    this.rotationAngle = 0.0,
   });
 
   @override
@@ -358,6 +371,12 @@ class PilgrimC3ProOverlayPainter extends CustomPainter {
     final litStones = _litStonesFor(readChapters);
     final progress = _progressFor(readChapters);
     final frontier = _frontierXFor(litStones);
+
+    final center = Offset(size.width / 2, size.height / 2);
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(rotationAngle);
+    canvas.translate(-center.dx, -center.dy);
 
     // Latest read path-stone halo pulse + Christian pilgrim
     if (litStones > 0) {
@@ -467,15 +486,23 @@ class PilgrimC3ProOverlayPainter extends CustomPainter {
       }
     }
 
-    // Floating landmark labels
+    canvas.restore();
+
+    // Floating landmark labels (drawn without rotation so text stays upright)
+    final cosR = cos(rotationAngle);
+    final sinR = sin(rotationAngle);
     for (final lm in _landmarkLabels) {
       final distAhead = lm.x - frontier;
       if (distAhead > _litFalloffCols) continue;
       final lit = distAhead <= 0 ? 1.0 : (1.0 - distAhead / _litFalloffCols);
       if (lit < 0.3) continue;
 
-      final pos = _project(lm.x.toDouble(), lm.y.toDouble(),
+      final raw = _project(lm.x.toDouble(), lm.y.toDouble(),
           lm.z.toDouble(), origin);
+      final pos = Offset(
+        center.dx + (raw.dx - center.dx) * cosR - (raw.dy - center.dy) * sinR,
+        center.dy + (raw.dx - center.dx) * sinR + (raw.dy - center.dy) * cosR,
+      );
       final tp = TextPainter(
         text: TextSpan(
           text: lm.label,
@@ -498,5 +525,6 @@ class PilgrimC3ProOverlayPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant PilgrimC3ProOverlayPainter old) =>
       old.glowAnimation != glowAnimation ||
-      old.readChapters != readChapters;
+      old.readChapters != readChapters ||
+      old.rotationAngle != rotationAngle;
 }
