@@ -41,6 +41,12 @@ enum PilgrimCVoxelType {
   pathStone,
   burden,
   cross,
+  ruinedBrick,
+  emberFire,
+  wicketGateStone,
+  wicketGateGlow,
+  treeOfLife,
+  gemstone,
 }
 
 class PilgrimCVoxel {
@@ -258,6 +264,40 @@ class PilgrimCLandscape {
   // -------------------------------------------------------------------------
   static void _addLandmarks(
       List<PilgrimCVoxel> voxels, List<List<int>> hm) {
+    // City of Destruction (멸망의 도시) — ruined buildings + embers
+    for (int x = 0; x <= 4; x++) {
+      for (int y = 20; y <= 26; y++) {
+        final bh = hm[x][y];
+        if ((x + y) % 3 == 0) {
+          final ruinH = bh + 2 + (x % 2);
+          for (int z = bh + 1; z <= ruinH; z++) {
+            voxels.add(PilgrimCVoxel(x: x, y: y, z: z,
+                type: PilgrimCVoxelType.ruinedBrick));
+          }
+        }
+      }
+    }
+    for (final pos in const [(1, 21), (3, 23), (2, 25), (0, 22), (4, 24)]) {
+      final bh = hm[pos.$1][pos.$2];
+      voxels.add(PilgrimCVoxel(x: pos.$1, y: pos.$2, z: bh + 1,
+          type: PilgrimCVoxelType.emberFire));
+    }
+
+    // Wicket Gate (좁은 문) — white stone pillars + arch + glow
+    final gateH = hm[6][20];
+    for (int z = gateH + 1; z <= gateH + 4; z++) {
+      voxels.add(PilgrimCVoxel(x: 6, y: 19, z: z,
+          type: PilgrimCVoxelType.wicketGateStone));
+      voxels.add(PilgrimCVoxel(x: 6, y: 21, z: z,
+          type: PilgrimCVoxelType.wicketGateStone));
+    }
+    voxels.add(PilgrimCVoxel(x: 6, y: 20, z: gateH + 4,
+        type: PilgrimCVoxelType.wicketGateStone));
+    voxels.add(PilgrimCVoxel(x: 6, y: 20, z: gateH + 2,
+        type: PilgrimCVoxelType.wicketGateGlow));
+    voxels.add(PilgrimCVoxel(x: 6, y: 20, z: gateH + 3,
+        type: PilgrimCVoxelType.wicketGateGlow));
+
     // Slough of Despond — mud + dark water filling the depression.
     for (int x = 10; x <= 14; x++) {
       for (int y = 16; y <= 22; y++) {
@@ -372,46 +412,70 @@ class PilgrimCLandscape {
       }
     }
 
-    // Celestial City — gold fortress on eastern plateau (x=54..58, y=16..24).
-    // Outer walls
+    // Celestial City — expanded fortress (Rev 21), x=54..58, y=16..24
+    // Outer walls — higher (z=7..12)
     for (int x = 54; x <= 58; x++) {
       for (int y = 16; y <= 24; y++) {
         final isEdge = x == 54 || x == 58 || y == 16 || y == 24;
         if (isEdge) {
-          for (int z = 7; z <= 9; z++) {
-            voxels.add(PilgrimCVoxel(
-              x: x, y: y, z: z,
-              type: PilgrimCVoxelType.celestialWall,
-            ));
+          for (int z = 7; z <= 12; z++) {
+            voxels.add(PilgrimCVoxel(x: x, y: y, z: z,
+                type: PilgrimCVoxelType.celestialWall));
           }
         }
       }
     }
-    // Towers at four corners.
+    // Corner towers (4) — tallest
     for (final pos in const [(54, 16), (58, 16), (54, 24), (58, 24)]) {
-      for (int z = 10; z <= 12; z++) {
-        voxels.add(PilgrimCVoxel(
-          x: pos.$1, y: pos.$2, z: z,
-          type: PilgrimCVoxelType.celestialTower,
-        ));
+      for (int z = 13; z <= 16; z++) {
+        voxels.add(PilgrimCVoxel(x: pos.$1, y: pos.$2, z: z,
+            type: PilgrimCVoxelType.celestialTower));
       }
     }
-    // Central keep.
+    // Mid-wall towers (4)
+    for (final pos in const [(56, 16), (56, 24), (54, 20), (58, 20)]) {
+      for (int z = 13; z <= 15; z++) {
+        voxels.add(PilgrimCVoxel(x: pos.$1, y: pos.$2, z: z,
+            type: PilgrimCVoxelType.celestialTower));
+      }
+    }
+    // Facade flanking towers
+    for (final pos in const [(54, 18), (54, 22)]) {
+      for (int z = 13; z <= 15; z++) {
+        voxels.add(PilgrimCVoxel(x: pos.$1, y: pos.$2, z: z,
+            type: PilgrimCVoxelType.celestialTower));
+      }
+    }
+    // Inner keep — tall central structure
     for (int x = 55; x <= 57; x++) {
       for (int y = 19; y <= 21; y++) {
-        for (int z = 7; z <= 10; z++) {
-          voxels.add(PilgrimCVoxel(
-            x: x, y: y, z: z,
-            type: PilgrimCVoxelType.celestialTower,
-          ));
+        for (int z = 7; z <= 13; z++) {
+          voxels.add(PilgrimCVoxel(x: x, y: y, z: z,
+              type: PilgrimCVoxelType.celestialTower));
         }
       }
     }
-    // Gate (brighter block).
-    voxels.add(const PilgrimCVoxel(
-      x: 54, y: 20, z: 7, type: PilgrimCVoxelType.celestialGate));
-    voxels.add(const PilgrimCVoxel(
-      x: 54, y: 20, z: 8, type: PilgrimCVoxelType.celestialGate));
+    // Gate (3 tall)
+    for (int z = 7; z <= 9; z++) {
+      voxels.add(PilgrimCVoxel(x: 54, y: 20, z: z,
+          type: PilgrimCVoxelType.celestialGate));
+    }
+    // Trees of Life (생명나무, Rev 22:2)
+    for (final pos in const [(55, 17), (57, 23)]) {
+      for (int z = 7; z <= 9; z++) {
+        voxels.add(PilgrimCVoxel(x: pos.$1, y: pos.$2, z: z,
+            type: PilgrimCVoxelType.treeOfLife));
+      }
+    }
+    // Gemstones on walls (계시록 21장 보석 기초석)
+    for (final gem in const [
+      (54, 17, 9), (54, 19, 11), (54, 23, 9),
+      (58, 17, 10), (58, 21, 9), (58, 23, 11),
+      (55, 16, 10), (57, 24, 9), (56, 16, 11), (56, 24, 10),
+    ]) {
+      voxels.add(PilgrimCVoxel(x: gem.$1, y: gem.$2, z: gem.$3,
+          type: PilgrimCVoxelType.gemstone));
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -779,6 +843,18 @@ class PilgrimCMountainPainter extends CustomPainter {
         return const Color(0xFF5A3A20);
       case PilgrimCVoxelType.cross:
         return _gold;
+      case PilgrimCVoxelType.ruinedBrick:
+        return const Color(0xFF2A1A14);
+      case PilgrimCVoxelType.emberFire:
+        return const Color(0xFFE85A20);
+      case PilgrimCVoxelType.wicketGateStone:
+        return const Color(0xFFE8E0D0);
+      case PilgrimCVoxelType.wicketGateGlow:
+        return _goldBright;
+      case PilgrimCVoxelType.treeOfLife:
+        return const Color(0xFF4A8A3A);
+      case PilgrimCVoxelType.gemstone:
+        return const Color(0xFF50C878);
     }
   }
 

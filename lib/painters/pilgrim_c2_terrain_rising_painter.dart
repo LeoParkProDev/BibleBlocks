@@ -248,6 +248,14 @@ class PilgrimC2Painter extends CustomPainter {
       case PilgrimCVoxelType.bush: return const Color(0xFF57734E);
       case PilgrimCVoxelType.cloud: return const Color(0xFFD8D4E0);
       case PilgrimCVoxelType.pathStone: return const Color(0xFFE9A583);
+      case PilgrimCVoxelType.burden: return const Color(0xFF5A3A20);
+      case PilgrimCVoxelType.cross: return const Color(0xFFD4A843);
+      case PilgrimCVoxelType.ruinedBrick: return const Color(0xFF2A1A14);
+      case PilgrimCVoxelType.emberFire: return const Color(0xFFE85A20);
+      case PilgrimCVoxelType.wicketGateStone: return const Color(0xFFE8E0D0);
+      case PilgrimCVoxelType.wicketGateGlow: return const Color(0xFFF5D467);
+      case PilgrimCVoxelType.treeOfLife: return const Color(0xFF4A8A3A);
+      case PilgrimCVoxelType.gemstone: return const Color(0xFF50C878);
     }
   }
 
