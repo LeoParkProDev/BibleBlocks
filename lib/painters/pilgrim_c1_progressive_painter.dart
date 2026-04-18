@@ -218,6 +218,15 @@ class PilgrimC1Painter extends CustomPainter {
       case PilgrimCVoxelType.wicketGateGlow: return const Color(0xFFF5D467);
       case PilgrimCVoxelType.treeOfLife: return const Color(0xFF4A8A3A);
       case PilgrimCVoxelType.gemstone: return const Color(0xFF50C878);
+      case PilgrimCVoxelType.apollyonBody: return const Color(0xFF6A1010);
+      case PilgrimCVoxelType.apollyonWing: return const Color(0xFF4A0808);
+      case PilgrimCVoxelType.smoke: return const Color(0xFF505050);
+      case PilgrimCVoxelType.lava: return const Color(0xFFFF4500);
+      case PilgrimCVoxelType.skull: return const Color(0xFFD0C8B0);
+      case PilgrimCVoxelType.deadTree: return const Color(0xFF3A2A1A);
+      case PilgrimCVoxelType.fairTent: return const Color(0xFFC04040);
+      case PilgrimCVoxelType.fairFlag: return const Color(0xFF4040C0);
+      case PilgrimCVoxelType.cage: return const Color(0xFF383838);
     }
   }
 

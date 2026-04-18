@@ -47,6 +47,15 @@ enum PilgrimCVoxelType {
   wicketGateGlow,
   treeOfLife,
   gemstone,
+  apollyonBody,
+  apollyonWing,
+  smoke,
+  lava,
+  skull,
+  deadTree,
+  fairTent,
+  fairFlag,
+  cage,
 }
 
 class PilgrimCVoxel {
@@ -369,24 +378,110 @@ class PilgrimCLandscape {
       }
     }
 
-    // Valley of the Shadow — black cliff caps.
-    for (int x = 31; x <= 35; x++) {
-      // Cliff walls.
-      for (int z = 3; z <= 7; z++) {
-        voxels.add(PilgrimCVoxel(
-          x: x, y: 17, z: z,
-          type: PilgrimCVoxelType.valleyShadow,
-        ));
-        voxels.add(PilgrimCVoxel(
-          x: x, y: 23, z: z,
-          type: PilgrimCVoxelType.valleyShadow,
-        ));
+    // Apollyon (아폴리온) — dragon beast in the Valley of Humiliation
+    // Body core
+    for (int z = 3; z <= 5; z++) {
+      voxels.add(PilgrimCVoxel(x: 27, y: 20, z: z, type: PilgrimCVoxelType.apollyonBody));
+    }
+    voxels.add(const PilgrimCVoxel(x: 27, y: 19, z: 4, type: PilgrimCVoxelType.apollyonBody));
+    voxels.add(const PilgrimCVoxel(x: 27, y: 21, z: 4, type: PilgrimCVoxelType.apollyonBody));
+    // Head
+    voxels.add(const PilgrimCVoxel(x: 26, y: 20, z: 5, type: PilgrimCVoxelType.apollyonBody));
+    voxels.add(const PilgrimCVoxel(x: 26, y: 20, z: 6, type: PilgrimCVoxelType.apollyonBody));
+    // Wings spread (y=18..22)
+    for (int y = 18; y <= 22; y++) {
+      if (y == 20) continue;
+      voxels.add(PilgrimCVoxel(x: 27, y: y, z: 5, type: PilgrimCVoxelType.apollyonWing));
+      if (y == 18 || y == 22) {
+        voxels.add(PilgrimCVoxel(x: 27, y: y, z: 6, type: PilgrimCVoxelType.apollyonWing));
       }
-      // Floor tint.
-      voxels.add(PilgrimCVoxel(
-        x: x, y: 20, z: 0,
-        type: PilgrimCVoxelType.valleyShadow,
-      ));
+    }
+    voxels.add(const PilgrimCVoxel(x: 28, y: 18, z: 5, type: PilgrimCVoxelType.apollyonWing));
+    voxels.add(const PilgrimCVoxel(x: 28, y: 22, z: 5, type: PilgrimCVoxelType.apollyonWing));
+    // Tail
+    voxels.add(const PilgrimCVoxel(x: 28, y: 20, z: 3, type: PilgrimCVoxelType.apollyonBody));
+    voxels.add(const PilgrimCVoxel(x: 29, y: 20, z: 3, type: PilgrimCVoxelType.apollyonBody));
+    voxels.add(const PilgrimCVoxel(x: 29, y: 20, z: 4, type: PilgrimCVoxelType.apollyonBody));
+    // Smoke
+    for (final s in const [(26, 19, 7), (26, 21, 7), (27, 20, 7), (28, 19, 6), (28, 21, 6)]) {
+      voxels.add(PilgrimCVoxel(x: s.$1, y: s.$2, z: s.$3, type: PilgrimCVoxelType.smoke));
+    }
+
+    // Valley of the Shadow of Death — deep chasm with lava, skulls, dead trees
+    for (int x = 31; x <= 35; x++) {
+      // Towering cliff walls (z=3..12)
+      for (int z = 3; z <= 12; z++) {
+        voxels.add(PilgrimCVoxel(x: x, y: 17, z: z,
+            type: PilgrimCVoxelType.valleyShadow));
+        voxels.add(PilgrimCVoxel(x: x, y: 23, z: z,
+            type: PilgrimCVoxelType.valleyShadow));
+      }
+      // Second cliff row for thickness
+      for (int z = 3; z <= 10; z++) {
+        voxels.add(PilgrimCVoxel(x: x, y: 18, z: z,
+            type: PilgrimCVoxelType.valleyShadow));
+        voxels.add(PilgrimCVoxel(x: x, y: 22, z: z,
+            type: PilgrimCVoxelType.valleyShadow));
+      }
+      // Dark floor
+      for (int y = 19; y <= 21; y++) {
+        voxels.add(PilgrimCVoxel(x: x, y: y, z: 0,
+            type: PilgrimCVoxelType.valleyShadow));
+      }
+    }
+    // Lava cracks in the floor
+    for (final lv in const [(32, 19), (33, 20), (34, 21), (31, 20)]) {
+      voxels.add(PilgrimCVoxel(x: lv.$1, y: lv.$2, z: 0,
+          type: PilgrimCVoxelType.lava));
+    }
+    // Skulls scattered
+    for (final sk in const [(31, 19, 1), (33, 21, 1), (35, 19, 1), (34, 20, 1)]) {
+      voxels.add(PilgrimCVoxel(x: sk.$1, y: sk.$2, z: sk.$3,
+          type: PilgrimCVoxelType.skull));
+    }
+    // Dead trees on cliff tops
+    for (final dt in const [(31, 17, 13), (33, 17, 13), (35, 23, 13), (32, 23, 13)]) {
+      voxels.add(PilgrimCVoxel(x: dt.$1, y: dt.$2, z: dt.$3,
+          type: PilgrimCVoxelType.deadTree));
+      voxels.add(PilgrimCVoxel(x: dt.$1, y: dt.$2, z: dt.$3 + 1,
+          type: PilgrimCVoxelType.deadTree));
+    }
+
+    // Vanity Fair (허영의 시장) — colorful tents, flags, cage at x=36..38
+    // Flatten terrain for marketplace
+    for (int x = 36; x <= 38; x++) {
+      for (int y = 17; y <= 22; y++) {
+        if (hm[x][y] < 3) hm[x][y] = 3;
+      }
+    }
+    // Tents (3 colorful stalls)
+    for (final tent in const [(36, 18), (37, 20), (38, 22)]) {
+      final bh = hm[tent.$1][tent.$2];
+      for (int z = bh + 1; z <= bh + 2; z++) {
+        voxels.add(PilgrimCVoxel(x: tent.$1, y: tent.$2, z: z,
+            type: PilgrimCVoxelType.fairTent));
+        voxels.add(PilgrimCVoxel(x: tent.$1, y: tent.$2 + 1, z: z,
+            type: PilgrimCVoxelType.fairTent));
+      }
+      // Tent roof (one higher)
+      voxels.add(PilgrimCVoxel(x: tent.$1, y: tent.$2, z: bh + 3,
+          type: PilgrimCVoxelType.fairTent));
+      voxels.add(PilgrimCVoxel(x: tent.$1, y: tent.$2 + 1, z: bh + 3,
+          type: PilgrimCVoxelType.fairTent));
+    }
+    // Flags on poles
+    for (final flag in const [(36, 17), (37, 19), (38, 21)]) {
+      final bh = hm[flag.$1][flag.$2];
+      for (int z = bh + 1; z <= bh + 4; z++) {
+        voxels.add(PilgrimCVoxel(x: flag.$1, y: flag.$2, z: z,
+            type: PilgrimCVoxelType.fairFlag));
+      }
+    }
+    // Cage
+    final cageH = hm[37][22];
+    for (int z = cageH + 1; z <= cageH + 2; z++) {
+      voxels.add(PilgrimCVoxel(x: 37, y: 22, z: z,
+          type: PilgrimCVoxelType.cage));
     }
 
     // Shining Mountains — replace peak tops with bright shining voxels.
@@ -855,6 +950,24 @@ class PilgrimCMountainPainter extends CustomPainter {
         return const Color(0xFF4A8A3A);
       case PilgrimCVoxelType.gemstone:
         return const Color(0xFF50C878);
+      case PilgrimCVoxelType.apollyonBody:
+        return const Color(0xFF6A1010);
+      case PilgrimCVoxelType.apollyonWing:
+        return const Color(0xFF4A0808);
+      case PilgrimCVoxelType.smoke:
+        return const Color(0xFF505050);
+      case PilgrimCVoxelType.lava:
+        return const Color(0xFFFF4500);
+      case PilgrimCVoxelType.skull:
+        return const Color(0xFFD0C8B0);
+      case PilgrimCVoxelType.deadTree:
+        return const Color(0xFF3A2A1A);
+      case PilgrimCVoxelType.fairTent:
+        return const Color(0xFFC04040);
+      case PilgrimCVoxelType.fairFlag:
+        return const Color(0xFF4040C0);
+      case PilgrimCVoxelType.cage:
+        return const Color(0xFF383838);
     }
   }
 
