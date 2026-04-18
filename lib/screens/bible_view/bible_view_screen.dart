@@ -415,8 +415,9 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
                       builder: (context, _) {
                         return InteractiveViewer(
                           transformationController: _transformController,
-                          minScale: 0.5,
+                          minScale: 0.3,
                           maxScale: 3.0,
+                          boundaryMargin: const EdgeInsets.all(double.infinity),
                           child: LayoutBuilder(
                             builder: (context, constraints) {
                               _canvasSize = Size(
