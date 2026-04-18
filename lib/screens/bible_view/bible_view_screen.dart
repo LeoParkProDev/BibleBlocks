@@ -12,6 +12,7 @@ import '../../painters/block_hit_test.dart';
 import '../../painters/isometric_bible_painter.dart';
 import '../../painters/noahs_ark_hit_test.dart';
 import '../../painters/noahs_ark_painter.dart';
+import '../../painters/pilgrim_c3_pro_painter.dart';
 import '../../painters/solomons_temple_hit_test.dart';
 import '../../painters/solomons_temple_painter.dart' show SolomonsTemplePainter, templeVoxels;
 import '../../providers/auth_provider.dart';
@@ -120,6 +121,7 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
       BibleModelType.book => _hitTest(scenePos),
       BibleModelType.noahsArk => NoahsArkHitTest.hitTest(scenePos, _canvasSize, _rotationAngle),
       BibleModelType.solomonsTemple => SolomonsTempleHitTest.hitTest(scenePos, _canvasSize, _rotationAngle),
+      BibleModelType.pilgrimMountain => null,
     };
   }
 
@@ -128,6 +130,7 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
       BibleModelType.book => BlockHitTest.toBlockIndex(coord),
       BibleModelType.noahsArk => NoahsArkHitTest.toBlockIndex(coord),
       BibleModelType.solomonsTemple => SolomonsTempleHitTest.toBlockIndex(coord),
+      BibleModelType.pilgrimMountain => -1,
     };
   }
 
@@ -136,6 +139,7 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
       BibleModelType.book => BlockHitTest.tooltipText(blockIndex, _latestProgressData),
       BibleModelType.noahsArk => NoahsArkHitTest.tooltipText(blockIndex, _latestProgressData),
       BibleModelType.solomonsTemple => SolomonsTempleHitTest.tooltipText(blockIndex, _latestProgressData),
+      BibleModelType.pilgrimMountain => '',
     };
   }
 
@@ -144,6 +148,7 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
       BibleModelType.book => BlockHitTest.blockTopCenter(coord, _canvasSize, _rotationAngle),
       BibleModelType.noahsArk => NoahsArkHitTest.blockTopCenter(coord, _canvasSize, _rotationAngle),
       BibleModelType.solomonsTemple => SolomonsTempleHitTest.blockTopCenter(coord, _canvasSize, _rotationAngle),
+      BibleModelType.pilgrimMountain => Offset.zero,
     };
   }
 
@@ -185,7 +190,33 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
             fillAnimation: _fillController.value,
             introAnimation: _introController.value,
           ),
+      BibleModelType.pilgrimMountain =>
+        throw StateError('pilgrimMountain uses its own two-layer render tree'),
     };
+  }
+
+  Widget _buildPilgrimScene(Map<int, Set<int>> data) {
+    final readChapters = ProgressService.totalRead(data);
+    final intro = Curves.easeOutCubic.transform(_introController.value);
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        RepaintBoundary(
+          child: CustomPaint(
+            painter: PilgrimC3ProStaticPainter(
+              readChapters: readChapters,
+              introAnimation: intro,
+            ),
+          ),
+        ),
+        CustomPaint(
+          painter: PilgrimC3ProOverlayPainter(
+            glowAnimation: _glowController.value,
+            readChapters: readChapters,
+          ),
+        ),
+      ],
+    );
   }
 
   void _onPointerHover(PointerHoverEvent event) {
@@ -246,6 +277,7 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
     final user = ref.read(authProvider).value;
     final isGuest = ref.read(isGuestProvider).value ?? false;
     final nickname = isGuest ? '게스트' : (user?.nickname ?? '사용자');
+
     final totalRead = ProgressService.totalRead(progressData);
     final percent = (totalRead / BibleData.totalChapters * 100).round();
 
@@ -332,18 +364,22 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
                     _introController.forward(from: 0.0);
                   });
                 }
-                if (_previousProgressData.isNotEmpty && data != _previousProgressData) {
+                if (_previousProgressData.isNotEmpty &&
+                    data != _previousProgressData &&
+                    modelType != BibleModelType.pilgrimMountain) {
                   final newBlocks = <int>{};
                   final totalBlocks = switch (modelType) {
                     BibleModelType.book => IsometricBiblePainter.totalPageBlocks,
                     BibleModelType.noahsArk => ArkVoxels.structuralCount,
                     BibleModelType.solomonsTemple => templeVoxels.length,
+                    BibleModelType.pilgrimMountain => 0,
                   };
                   for (int i = 0; i < totalBlocks; i++) {
                     final range = switch (modelType) {
                       BibleModelType.book => BlockHitTest.blockChapterRange(i),
                       BibleModelType.noahsArk => NoahsArkHitTest.blockChapterRange(i),
                       BibleModelType.solomonsTemple => SolomonsTempleHitTest.blockChapterRange(i),
+                      BibleModelType.pilgrimMountain => (globalStart: 0, globalEnd: 0),
                     };
                     bool wasFullBefore = true;
                     bool isFullNow = true;
@@ -384,9 +420,11 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
                               _canvasSize = Size(
                                   constraints.maxWidth, constraints.maxHeight);
                               return SizedBox.expand(
-                                child: CustomPaint(
-                                  painter: _buildPainter(modelType, data),
-                                ),
+                                child: modelType == BibleModelType.pilgrimMountain
+                                    ? _buildPilgrimScene(data)
+                                    : CustomPaint(
+                                        painter: _buildPainter(modelType, data),
+                                      ),
                               );
                             },
                           ),
@@ -411,39 +449,45 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
               left: 20,
               right: 20,
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '$totalRead / ${BibleData.totalChapters}  (${(overallProgress * 100).toStringAsFixed(1)}%)',
-                      style: const TextStyle(
-                        color: AppColors.gold,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '$totalRead / ${BibleData.totalChapters}  (${(overallProgress * 100).toStringAsFixed(1)}%)',
+                          style: const TextStyle(
+                            color: AppColors.gold,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () => _shareProgress(),
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(18),
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        onTap: () => _shareProgress(),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: const Icon(
+                            Icons.share,
+                            color: AppColors.gold,
+                            size: 18,
+                          ),
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.share,
-                        color: AppColors.gold,
-                        size: 18,
-                      ),
-                    ),
+                    ],
                   ),
                   const Spacer(),
                   GestureDetector(

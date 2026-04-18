@@ -39,6 +39,8 @@ enum PilgrimCVoxelType {
   bush,
   cloud,
   pathStone,
+  burden,
+  cross,
 }
 
 class PilgrimCVoxel {
@@ -297,6 +299,26 @@ class PilgrimCLandscape {
     voxels.add(const PilgrimCVoxel(
       x: 20, y: 16, z: 7, type: PilgrimCVoxelType.interpreterRoof));
 
+    // Cross Hill (십자가 언덕) — Christian's burden falls off at the cross
+    // Raise mound
+    for (int x = 22; x <= 24; x++) {
+      for (int y = 16; y <= 18; y++) {
+        if (hm[x][y] < 4) hm[x][y] = 4;
+      }
+    }
+    // Gold cross (vertical beam + crossbar)
+    voxels.add(const PilgrimCVoxel(x: 23, y: 17, z: 5, type: PilgrimCVoxelType.cross));
+    voxels.add(const PilgrimCVoxel(x: 23, y: 17, z: 6, type: PilgrimCVoxelType.cross));
+    voxels.add(const PilgrimCVoxel(x: 23, y: 17, z: 7, type: PilgrimCVoxelType.cross));
+    voxels.add(const PilgrimCVoxel(x: 22, y: 17, z: 6, type: PilgrimCVoxelType.cross)); // left arm
+    voxels.add(const PilgrimCVoxel(x: 24, y: 17, z: 6, type: PilgrimCVoxelType.cross)); // right arm
+    // Burden tumbled at base
+    voxels.add(const PilgrimCVoxel(x: 23, y: 18, z: 4, type: PilgrimCVoxelType.burden));
+    voxels.add(const PilgrimCVoxel(x: 24, y: 18, z: 4, type: PilgrimCVoxelType.burden));
+    voxels.add(const PilgrimCVoxel(x: 23, y: 19, z: 3, type: PilgrimCVoxelType.burden));
+    voxels.add(const PilgrimCVoxel(x: 24, y: 19, z: 3, type: PilgrimCVoxelType.burden));
+    voxels.add(const PilgrimCVoxel(x: 25, y: 19, z: 3, type: PilgrimCVoxelType.burden));
+
     // Valley of Humiliation — moss/darker ground tinting (add a thin layer).
     for (int x = 25; x <= 29; x++) {
       for (int y = 18; y <= 22; y++) {
@@ -398,8 +420,8 @@ class PilgrimCLandscape {
   static void _addScenery(
       List<PilgrimCVoxel> voxels, List<List<int>> hm) {
     final rng = Random(42);
-    // Trees
-    for (int i = 0; i < 55; i++) {
+    // Trees — taller canopy with occasional 3-slab trunks
+    for (int i = 0; i < 140; i++) {
       final x = rng.nextInt(gridW);
       final y = rng.nextInt(gridH);
       final h = hm[x][y];
@@ -412,18 +434,15 @@ class PilgrimCLandscape {
       if (_inRect(x, y, 40, 10, 46, 28)) continue; // shining mts
       if (_inRect(x, y, 49, 12, 51, 28)) continue; // jordan
       if (_inRect(x, y, 54, 16, 58, 24)) continue; // city
-      // Trunk
-      voxels.add(PilgrimCVoxel(
-        x: x, y: y, z: h + 1,
-        type: PilgrimCVoxelType.tree,
-      ));
-      voxels.add(PilgrimCVoxel(
-        x: x, y: y, z: h + 2,
-        type: PilgrimCVoxelType.tree,
-      ));
+      final tall = rng.nextDouble() < 0.35;
+      voxels.add(PilgrimCVoxel(x: x, y: y, z: h + 1, type: PilgrimCVoxelType.tree));
+      voxels.add(PilgrimCVoxel(x: x, y: y, z: h + 2, type: PilgrimCVoxelType.tree));
+      if (tall) {
+        voxels.add(PilgrimCVoxel(x: x, y: y, z: h + 3, type: PilgrimCVoxelType.tree));
+      }
     }
     // Bushes
-    for (int i = 0; i < 40; i++) {
+    for (int i = 0; i < 110; i++) {
       final x = rng.nextInt(gridW);
       final y = rng.nextInt(gridH);
       final h = hm[x][y];
@@ -433,9 +452,10 @@ class PilgrimCLandscape {
         type: PilgrimCVoxelType.bush,
       ));
     }
-    // Clouds
+    // Clouds — more clusters spread across sky
     for (final cluster in const [
-      (8, 4), (22, 6), (36, 4), (48, 8), (15, 32), (44, 34)
+      (8, 4), (22, 6), (36, 4), (48, 8), (15, 32), (44, 34),
+      (3, 14), (28, 2), (52, 30), (38, 26), (18, 36), (55, 6),
     ]) {
       final cx = cluster.$1;
       final cy = cluster.$2;
@@ -755,6 +775,10 @@ class PilgrimCMountainPainter extends CustomPainter {
         return _cloud;
       case PilgrimCVoxelType.pathStone:
         return _pathStone;
+      case PilgrimCVoxelType.burden:
+        return const Color(0xFF5A3A20);
+      case PilgrimCVoxelType.cross:
+        return _gold;
     }
   }
 

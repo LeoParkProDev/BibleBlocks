@@ -36,7 +36,7 @@ List<PilgrimCVoxel> _buildVoxels() {
         v.type == PilgrimCVoxelType.terrainPeak;
     if (isTerrain) {
       final h = hm[v.x][v.y];
-      if (v.z < h - 1) continue;
+      if (v.z < h - 3) continue;
       terrainCount++;
     }
     out.add(v);
@@ -137,6 +137,8 @@ Color _colorFor(PilgrimCVoxel v) {
     case PilgrimCVoxelType.bush: return const Color(0xFF57734E);
     case PilgrimCVoxelType.cloud: return const Color(0xFFD8D4E0);
     case PilgrimCVoxelType.pathStone: return const Color(0xFFE9A583);
+    case PilgrimCVoxelType.burden: return const Color(0xFF5A3A20);
+    case PilgrimCVoxelType.cross: return const Color(0xFFD4A843);
   }
 }
 
@@ -295,6 +297,19 @@ class PilgrimC3ProStaticPainter extends CustomPainter {
 // Overlay layer — repaints every frame, but draws ~2 circles.
 // ---------------------------------------------------------------------------
 
+// Landmark label data for floating text overlay
+const _landmarkLabels = [
+  (x: 2, y: 22, z: 3, label: '멸망의 도시'),
+  (x: 12, y: 19, z: 3, label: '낙심의 늪'),
+  (x: 19, y: 15, z: 9, label: '해석자의 집'),
+  (x: 23, y: 17, z: 9, label: '✟ 십자가 언덕'),
+  (x: 27, y: 20, z: 4, label: '겸손의 골짜기'),
+  (x: 33, y: 20, z: 9, label: '사망의 골짜기'),
+  (x: 43, y: 19, z: 15, label: '즐거운 산'),
+  (x: 50, y: 20, z: 3, label: '요단강'),
+  (x: 56, y: 20, z: 14, label: '천성'),
+];
+
 class PilgrimC3ProOverlayPainter extends CustomPainter {
   final double glowAnimation;
   final int readChapters;
@@ -308,8 +323,9 @@ class PilgrimC3ProOverlayPainter extends CustomPainter {
     final origin = _sceneOrigin(size);
     final litStones = _litStonesFor(readChapters);
     final progress = _progressFor(readChapters);
+    final frontier = _frontierXFor(litStones);
 
-    // Latest read path-stone halo pulse
+    // Latest read path-stone halo pulse + Christian pilgrim
     if (litStones > 0) {
       for (final v in _voxels) {
         if (v.pathIndex == litStones - 1) {
@@ -322,6 +338,15 @@ class PilgrimC3ProOverlayPainter extends CustomPainter {
               ..color = Color.fromRGBO(245, 212, 103, 0.4 * pulse)
               ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
           );
+
+          // Christian pilgrim character — body + head
+          _drawCube(canvas, v.x.toDouble(), v.y.toDouble(),
+              (v.z + 1).toDouble(), origin,
+              const Color(0xFF8B6914), const Color(0xFF6B5010), const Color(0xFF5A420D));
+          _drawCube(canvas, v.x.toDouble(), v.y.toDouble(),
+              (v.z + 2).toDouble(), origin,
+              const Color(0xFFE8D0B0), const Color(0xFFC8B090), const Color(0xFFA89070));
+
           break;
         }
       }
@@ -350,6 +375,33 @@ class PilgrimC3ProOverlayPainter extends CustomPainter {
               center: cityPos, radius: 80 + 60 * radiance))
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
       );
+    }
+
+    // Floating landmark labels
+    for (final lm in _landmarkLabels) {
+      final distAhead = lm.x - frontier;
+      if (distAhead > _litFalloffCols) continue;
+      final lit = distAhead <= 0 ? 1.0 : (1.0 - distAhead / _litFalloffCols);
+      if (lit < 0.3) continue;
+
+      final pos = _project(lm.x.toDouble(), lm.y.toDouble(),
+          lm.z.toDouble(), origin);
+      final tp = TextPainter(
+        text: TextSpan(
+          text: lm.label,
+          style: TextStyle(
+            color: Color.fromRGBO(240, 230, 210, (lit * 0.85).clamp(0.0, 0.85)),
+            fontSize: 9,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+            shadows: const [
+              Shadow(color: Color(0xCC000000), blurRadius: 4),
+            ],
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, Offset(pos.dx - tp.width / 2, pos.dy - tp.height));
     }
   }
 
