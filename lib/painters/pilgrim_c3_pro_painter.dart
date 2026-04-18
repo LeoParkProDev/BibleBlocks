@@ -212,21 +212,40 @@ void _drawWireframe(Canvas canvas, PilgrimCVoxel v, Offset origin) {
 
 void _drawSky(Canvas canvas, Size size, double progress) {
   final p = progress;
-  final topCol = Color.lerp(
-    const Color(0xFF050510),
-    const Color(0xFF3A2448),
-    (p * 2).clamp(0, 1),
-  )!;
-  final midCol = Color.lerp(
-    const Color(0xFF1A1420),
-    const Color(0xFFC47B5A),
-    p,
-  )!;
-  final horizonCol = Color.lerp(
-    const Color(0xFF2A1A18),
-    const Color(0xFFF5D467),
-    p,
-  )!;
+  Color topCol, midCol, horizonCol;
+
+  if (p < 0.20) {
+    // 멸망~늪: purple pre-dawn
+    final t = p / 0.20;
+    topCol = Color.lerp(const Color(0xFF050510), const Color(0xFF1A0A28), t)!;
+    midCol = Color.lerp(const Color(0xFF0A0818), const Color(0xFF2A1438), t)!;
+    horizonCol = Color.lerp(const Color(0xFF1A0A14), const Color(0xFF3A1A30), t)!;
+  } else if (p < 0.50) {
+    // 해석자~겸손: orange sunset
+    final t = (p - 0.20) / 0.30;
+    topCol = Color.lerp(const Color(0xFF1A0A28), const Color(0xFF2A1820), t)!;
+    midCol = Color.lerp(const Color(0xFF2A1438), const Color(0xFFC47B5A), t)!;
+    horizonCol = Color.lerp(const Color(0xFF3A1A30), const Color(0xFFE8964A), t)!;
+  } else if (p < 0.75) {
+    // 사망 골짜기: dark crimson
+    final t = (p - 0.50) / 0.25;
+    topCol = Color.lerp(const Color(0xFF2A1820), const Color(0xFF0A0508), t)!;
+    midCol = Color.lerp(const Color(0xFFC47B5A), const Color(0xFF5A1A18), t)!;
+    horizonCol = Color.lerp(const Color(0xFFE8964A), const Color(0xFF3A0A0A), t)!;
+  } else if (p < 0.95) {
+    // 즐거운 산: golden dawn
+    final t = (p - 0.75) / 0.20;
+    topCol = Color.lerp(const Color(0xFF0A0508), const Color(0xFF3A2448), t)!;
+    midCol = Color.lerp(const Color(0xFF5A1A18), const Color(0xFFD4A843), t)!;
+    horizonCol = Color.lerp(const Color(0xFF3A0A0A), const Color(0xFFF5D467), t)!;
+  } else {
+    // 천성: platinum brilliance
+    final t = ((p - 0.95) / 0.05).clamp(0.0, 1.0);
+    topCol = Color.lerp(const Color(0xFF3A2448), const Color(0xFF6A5A78), t)!;
+    midCol = Color.lerp(const Color(0xFFD4A843), const Color(0xFFF5E8C0), t)!;
+    horizonCol = Color.lerp(const Color(0xFFF5D467), const Color(0xFFFFF8E8), t)!;
+  }
+
   final rect = Offset.zero & size;
   canvas.drawRect(
     rect,
@@ -390,6 +409,62 @@ class PilgrimC3ProOverlayPainter extends CustomPainter {
               center: cityPos, radius: 80 + 60 * radiance))
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
       );
+    }
+
+    // Valley of Shadow lightning (#16) — flashes when frontier is in x=31-35
+    if (frontier >= 28 && frontier <= 38) {
+      final flash = sin(glowAnimation * 17.3);
+      if (flash > 0.85) {
+        final boltPaint = Paint()
+          ..color = Color.fromRGBO(255, 255, 255, (flash - 0.85) * 6.0)
+          ..strokeWidth = 1.5
+          ..style = PaintingStyle.stroke;
+        final bx = 33.0;
+        final by = 20.0;
+        final top = _project(bx, by, 14, origin);
+        final mid = _project(bx + 1, by - 1, 8, origin);
+        final bot = _project(bx, by, 2, origin);
+        canvas.drawPath(
+          Path()..moveTo(top.dx, top.dy)..lineTo(mid.dx, mid.dy)..lineTo(bot.dx, bot.dy),
+          boltPaint,
+        );
+        canvas.drawCircle(bot, 6, Paint()
+          ..color = Color.fromRGBO(255, 200, 100, (flash - 0.85) * 4.0)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8));
+      }
+    }
+
+    // Celestial beams (#17) — golden rays when progress >= 90%
+    if (progress >= 0.90) {
+      final beamAlpha = ((progress - 0.90) / 0.10).clamp(0.0, 1.0);
+      final pulse = 0.7 + 0.3 * sin(glowAnimation * 2 * pi);
+      for (final bx in const [55.0, 56.0, 57.0]) {
+        final top = _project(bx, 20, 22, origin);
+        final bot = _project(bx, 20, 14, origin);
+        canvas.drawLine(
+          top, bot,
+          Paint()
+            ..color = Color.fromRGBO(245, 212, 103, 0.35 * beamAlpha * pulse)
+            ..strokeWidth = 4
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+        );
+      }
+      // Angel silhouettes
+      if (progress >= 0.95) {
+        final angelAlpha = ((progress - 0.95) / 0.05).clamp(0.0, 1.0);
+        for (final ap in const [(53.0, 19.0, 16.0), (53.0, 21.0, 15.0)]) {
+          final ac = _project(ap.$1, ap.$2, ap.$3, origin);
+          canvas.drawCircle(ac, 3, Paint()
+            ..color = Color.fromRGBO(255, 255, 255, 0.6 * angelAlpha * pulse));
+          // Wings
+          canvas.drawLine(
+            Offset(ac.dx - 5, ac.dy), Offset(ac.dx + 5, ac.dy),
+            Paint()
+              ..color = Color.fromRGBO(255, 255, 255, 0.4 * angelAlpha * pulse)
+              ..strokeWidth = 1.5,
+          );
+        }
+      }
     }
 
     // Floating landmark labels
