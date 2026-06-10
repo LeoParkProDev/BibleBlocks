@@ -22,19 +22,23 @@ class LoginScreen extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // 앱 아이콘
+                // 앱 로고
                 Container(
-                  width: 80,
-                  height: 80,
+                  width: 96,
+                  height: 96,
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
+                    color: AppColors.darkBg,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.25),
+                        blurRadius: 24,
+                        spreadRadius: 2,
+                      ),
+                    ],
                   ),
-                  child: const Icon(
-                    Icons.auto_stories,
-                    size: 40,
-                    color: AppColors.primary,
-                  ),
+                  child: Image.asset('assets/icon/icon_foreground.png'),
                 ),
                 const SizedBox(height: 24),
 
