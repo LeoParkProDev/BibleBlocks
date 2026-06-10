@@ -53,3 +53,9 @@ android/key.properties
 # Firebase / Google API keys
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
+
+# Android Gradle build output
+/android/build/
+
+# 개역한글 원본 데이터 (13.5MB) — 변환 산출물(assets/bible/krv)만 커밋
+tool/getbible_korean.json

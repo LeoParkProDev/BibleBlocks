@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../data/bible_data.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/last_position_provider.dart';
 import '../../providers/progress_provider.dart';
 import '../../theme/app_colors.dart';
 
@@ -40,8 +42,25 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
     final progressAsync = ref.watch(progressProvider);
     final totalRead = ref.watch(totalReadProvider);
     final overallProgress = ref.watch(overallProgressProvider);
+    final lastPos = ref.watch(lastPositionProvider);
 
     return Scaffold(
+      floatingActionButton: lastPos == null
+          ? null
+          : FloatingActionButton.extended(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.play_arrow),
+              label: Text(
+                '이어 읽기 · ${BibleData.books[lastPos.book].name} ${lastPos.chapter}장',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              onPressed: () =>
+                  context.push('/reader/${lastPos.book}/${lastPos.chapter}'),
+            ),
       appBar: AppBar(
         title: const Text('체크리스트'),
         actions: [
@@ -454,6 +473,10 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
+            context.push('/reader/${book.index}/$chapter');
+          },
+          onLongPress: () {
+            HapticFeedback.selectionClick();
             ref
                 .read(progressProvider.notifier)
                 .toggleChapter(book.index, chapter);

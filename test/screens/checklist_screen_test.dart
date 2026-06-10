@@ -103,15 +103,33 @@ void main() {
     await tester.tap(find.text('마태복음'));
     await tester.pumpAndSettle();
 
-    // 장 "1" 탭
+    // 장 "1" 길게 눌러 빠른 체크 (탭은 리더로 이동하므로 길게 누르기가 토글)
     final gridItems = find.descendant(
       of: find.byType(GridView),
       matching: find.text('1'),
     );
-    await tester.tap(gridItems);
+    await tester.longPress(gridItems);
     await tester.pumpAndSettle();
 
     expect(find.text('1 / 1189장'), findsOneWidget);
+  });
+
+  // 이어 읽기: 마지막 위치가 있으면 FAB 표시
+  testWidgets('마지막 읽은 위치가 있으면 "이어 읽기" 버튼 표시', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'last_book': 0,
+      'last_chapter': 3,
+    });
+    await tester.pumpWidget(buildTestApp());
+    await tester.pumpAndSettle();
+    expect(find.textContaining('이어 읽기'), findsOneWidget);
+    expect(find.textContaining('창세기 3장'), findsOneWidget);
+  });
+
+  testWidgets('기록이 없으면 "이어 읽기" 버튼 없음', (tester) async {
+    await tester.pumpWidget(buildTestApp());
+    await tester.pumpAndSettle();
+    expect(find.textContaining('이어 읽기'), findsNothing);
   });
 
   // E-10: 스크롤해서 빌레몬서(1장) 찾기
@@ -138,7 +156,7 @@ void main() {
       of: find.byType(GridView),
       matching: find.text('1'),
     );
-    await tester.tap(ch1);
+    await tester.longPress(ch1);
     await tester.pumpAndSettle();
 
     expect(find.byIcon(Icons.check), findsWidgets);

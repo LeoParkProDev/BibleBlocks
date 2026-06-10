@@ -20,8 +20,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    // 내 성경 탭 라벨이 BottomNavigationBar에 존재
-    expect(find.text('내 성경'), findsWidgets);
+    // 블록뷰 탭 라벨이 BottomNavigationBar에 존재
+    expect(find.text('블록뷰'), findsWidgets);
   });
 }
 

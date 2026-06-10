@@ -33,11 +33,11 @@ void main() {
   });
 
   // I-01
-  testWidgets('I-01: 앱 시작 시 탭1 (내 성경) 표시', (tester) async {
+  testWidgets('I-01: 앱 시작 시 탭1 (블록뷰) 표시', (tester) async {
     await tester.pumpWidget(buildTestApp());
     await tester.pumpAndSettle();
-    // BottomNavigationBar에 '내 성경' 라벨 존재
-    expect(find.text('내 성경'), findsWidgets);
+    // BottomNavigationBar에 '블록뷰' 라벨 존재
+    expect(find.text('블록뷰'), findsWidgets);
   });
 
   // I-02
@@ -63,7 +63,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // 탭1로 이동
-    await tapNavTab(tester, '내 성경');
+    await tapNavTab(tester, '블록뷰');
 
     // 다시 탭2로 복귀
     await tapNavTab(tester, '체크리스트');
@@ -89,11 +89,11 @@ void main() {
       of: find.byType(GridView),
       matching: find.text('1'),
     );
-    await tester.tap(ch1);
+    await tester.longPress(ch1); // 탭은 리더로 이동하므로 길게 눌러 빠른 체크
     await tester.pumpAndSettle();
 
     // 탭1로 이동
-    await tapNavTab(tester, '내 성경');
+    await tapNavTab(tester, '블록뷰');
 
     // 진행률 반영
     expect(find.textContaining('1 / 1189'), findsOneWidget);
@@ -108,7 +108,7 @@ void main() {
       find.byType(BottomNavigationBar),
     );
     expect(navBar.items.length, 3);
-    expect(navBar.items[0].label, '내 성경');
+    expect(navBar.items[0].label, '블록뷰');
     expect(navBar.items[1].label, '체크리스트');
     expect(navBar.items[2].label, '설정');
   });

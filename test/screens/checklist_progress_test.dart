@@ -31,7 +31,7 @@ void main() {
       of: find.byType(GridView),
       matching: find.text('1'),
     );
-    await tester.tap(ch1);
+    await tester.longPress(ch1);
     await tester.pumpAndSettle();
 
     expect(find.text('1 / 1189장'), findsOneWidget);
@@ -53,7 +53,7 @@ void main() {
       of: find.byType(GridView),
       matching: find.text('1'),
     );
-    await tester.tap(ch1);
+    await tester.longPress(ch1);
     await tester.pumpAndSettle();
 
     expect(find.text('0.0%'), findsNothing);
@@ -72,7 +72,7 @@ void main() {
       of: find.byType(GridView),
       matching: find.text('1'),
     );
-    await tester.tap(ch1);
+    await tester.longPress(ch1);
     await tester.pumpAndSettle();
 
     expect(find.text('1/50장'), findsOneWidget);
@@ -101,7 +101,7 @@ void main() {
       of: find.byType(GridView),
       matching: find.text('1'),
     );
-    await tester.tap(ch1);
+    await tester.longPress(ch1);
     await tester.pumpAndSettle();
 
     // "미완료" 필터

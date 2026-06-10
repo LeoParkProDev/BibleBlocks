@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 BibleBlocks — 성경 읽기 시각화 앱. 성경 66권 1,189장을 체크하면 아이소메트릭 2.5D 성경책이 블록 단위로 채워지는 동기부여 앱.
-Flutter 단일 프로젝트 (Android + iOS + Web). 카카오 로그인 + 게스트 모드 지원, 로컬 저장(SharedPreferences) 기반.
+Flutter 단일 프로젝트 (Android + iOS + Web). 카카오 로그인 + 게스트 모드 지원. 로그인 유저는 Firebase Firestore (클라우드), 게스트는 SharedPreferences (로컬) 저장.
 
 초기 설계 문서: [Docs/Plan0.md](Docs/Plan0.md)
 3D 인터랙션 설계: [Docs/Interaction.md](Docs/Interaction.md)
@@ -27,18 +27,21 @@ flutter run -d emulator                                  # 안드로이드 실�
 
 ### Layer Structure
 ```
-screens/ → providers/ → services/progress_service.dart → SharedPreferences (로컬)
+screens/ → providers/ → services/progress_service.dart → Firestore (로그인) / SharedPreferences (게스트)
 ```
 
 - **상태관리**: Riverpod `AsyncNotifierProvider` 기반
 - **인증**: 카카오 로그인 (`kakao_flutter_sdk_user`) + 게스트 모드, `AuthProvider` → `routerProvider` redirect
-- **CRUD**: `ProgressService` 직접 호출 (userId 기반 키 네임스페이싱 → 유저별 데이터 분리)
-- **라우팅**: go_router + StatefulShellRoute 3탭 (내 성경 / 체크리스트 / 설정) + 로그인 redirect
+- **CRUD**: `ProgressService` 직접 호출 (userId 기반 분기 — 로그인 시 Firestore, 게스트 시 로컬)
+- **라우팅**: go_router + StatefulShellRoute 3탭 (블록뷰 / 체크리스트 / 설정) + 로그인 redirect
 
-### Data Structure
-```
-users/{uid}/progress/{bookIndex}  # BookProgress (읽은 장 번호 Set)
-```
+### Data Storage
+| 상태 | 저장소 | 동기화 |
+|------|--------|--------|
+| 로그인 유저 | Firestore `users/{uid}` (progress 필드) | 크로스 디바이스 공유 |
+| 게스트 | SharedPreferences (`bible_progress` 키) | 해당 기기만 |
+
+- 게스트 → 로그인 시 `migrateGuestData()`로 로컬 데이터를 Firestore에 복사 (Firestore에 기존 데이터 없을 때만)
 
 ### 3D 시각화
 - `CustomPainter` 기반 아이소메트릭 렌더링

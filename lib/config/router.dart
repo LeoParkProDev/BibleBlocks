@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../data/bible_data.dart';
 import '../providers/auth_provider.dart';
 import '../screens/bible_view/bible_view_screen.dart';
 import '../screens/checklist/checklist_screen.dart';
 import '../screens/login/login_screen.dart';
+import '../screens/reader/reader_screen.dart';
 import '../screens/settings/settings_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -52,6 +54,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/login',
         builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/reader/:book/:chapter',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final book = int.tryParse(state.pathParameters['book'] ?? '') ?? 0;
+          final chapter =
+              int.tryParse(state.pathParameters['chapter'] ?? '') ?? 1;
+          final safeBook = book.clamp(0, BibleData.totalBooks - 1);
+          final safeChapter =
+              chapter.clamp(1, BibleData.books[safeBook].chapters);
+          return ReaderScreen(bookIndex: safeBook, chapter: safeChapter);
+        },
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
@@ -102,8 +117,8 @@ class ScaffoldWithNavBar extends StatelessWidget {
         onTap: (index) => navigationShell.goBranch(index),
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.auto_stories),
-            label: '내 성경',
+            icon: Icon(Icons.view_in_ar),
+            label: '블록뷰',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.checklist),
