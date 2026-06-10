@@ -37,12 +37,13 @@
   <script>
     Kakao.init('5cf3f493b53a15dca87ca6e0bf9884c1');
 
+    // 정적 이미지 카카오톡 공유
     function _kakaoShareSendDefault(nickname, percent, totalRead, totalChapters, imageUrl, webUrl) {
       Kakao.Share.sendDefault({
         objectType: 'feed',
         content: {
-          title: nickname + '의 바이블블록',
-          description: '진척도: ' + percent + '% (' + totalRead + '/' + totalChapters + '장)',
+          title: '(바이블블록) 함께 성경읽기를 시작해요.',
+          description: nickname + '의 진척도: ' + percent + '% (' + totalRead + '/' + totalChapters + '장)',
           imageUrl: imageUrl,
           link: { webUrl: webUrl, mobileWebUrl: webUrl },
         },

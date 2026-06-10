@@ -12,5 +12,12 @@ void shareViaKakao({
   required String imageUrl,
   required String webUrl,
 }) {
-  // No-op on non-web platforms; native share is used instead.
+  // No-op on non-web platforms.
+}
+
+void shareViaKakaoWithImage({
+  required Uint8List imageBytes,
+  required String webUrl,
+}) {
+  // No-op on non-web platforms.
 }

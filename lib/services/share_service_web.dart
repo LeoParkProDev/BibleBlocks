@@ -30,6 +30,13 @@ void shareViaKakao({
   );
 }
 
+void shareViaKakaoWithImage({
+  required Uint8List imageBytes,
+  required String webUrl,
+}) {
+  // Not used — kept for interface compatibility
+}
+
 @JS('_kakaoShareSendDefault')
 external void _kakaoShareSendDefault(
   JSString nickname,
