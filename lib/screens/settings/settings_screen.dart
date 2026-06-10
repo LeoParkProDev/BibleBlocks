@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/bible_data.dart';
 import '../../models/bible_model.dart';
@@ -12,6 +13,9 @@ import '../../services/share_service.dart';
 import '../../services/share_service_web.dart'
     if (dart.library.io) '../../services/share_service_stub.dart' as platform;
 import '../../theme/app_colors.dart';
+
+/// 개발자 후원 링크 (Toss toss.me). 발급 후 이 한 줄만 교체하면 됩니다.
+const String _tossDonationUrl = 'https://toss.me/YOUR_TOSS_ID';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -93,6 +97,35 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   ),
                   onTap: () => _shareProgress(context, ref),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // 개발자 후원하기
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: ListTile(
+                  leading: const Icon(Icons.favorite, color: AppColors.gold),
+                  title: const Text(
+                    '개발자 후원하기',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  subtitle: const Text(
+                    'BibleBlocks가 도움이 되셨다면 커피 한 잔 ☕',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  onTap: () => _openDonation(context),
                 ),
               ),
 
@@ -190,12 +223,11 @@ class SettingsScreen extends ConsumerWidget {
     final isGuest = ref.read(isGuestProvider).value ?? false;
     final nickname = isGuest ? '게스트' : (user?.nickname ?? '사용자');
 
-    try {
-      final totalRead = ProgressService.totalRead(progressData);
-      final percent = (totalRead / BibleData.totalChapters * 100).round();
+    final totalRead = ProgressService.totalRead(progressData);
+    final percent = (totalRead / BibleData.totalChapters * 100).round();
 
+    try {
       if (kIsWeb) {
-        // 웹: 카카오톡 공유
         platform.shareViaKakao(
           nickname: nickname,
           percent: percent,
@@ -205,7 +237,6 @@ class SettingsScreen extends ConsumerWidget {
           webUrl: 'https://bible-blocks-omega.vercel.app',
         );
       } else {
-        // 모바일: 네이티브 공유 시트
         await ShareService.shareProgress(
           progressData: progressData,
           nickname: nickname,
@@ -215,6 +246,24 @@ class SettingsScreen extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('공유 실패: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _openDonation(BuildContext context) async {
+    final uri = Uri.parse(_tossDonationUrl);
+    try {
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!ok && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('후원 페이지를 열 수 없습니다')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('후원 페이지를 열 수 없습니다: $e')),
         );
       }
     }
