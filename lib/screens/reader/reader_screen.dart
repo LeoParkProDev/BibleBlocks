@@ -74,6 +74,21 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     _savePosition();
   }
 
+  /// 헤더용 컴팩트 아이콘 버튼 (기본 48px → 40px, 좁은 화면 공간 확보)
+  Widget _headerIcon({
+    required String tooltip,
+    required Widget icon,
+    VoidCallback? onPressed,
+  }) {
+    return IconButton(
+      tooltip: tooltip,
+      icon: icon,
+      onPressed: onPressed,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+    );
+  }
+
   void _onUserScroll(UserScrollNotification n) {
     if (n.metrics.axis != Axis.vertical) return;
     if (n.direction == ScrollDirection.reverse && _chromeVisible) {
@@ -113,77 +128,85 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                 minHeight: kToolbarHeight,
                 maxHeight: kToolbarHeight,
                 alignment: Alignment.bottomCenter,
-                child: Row(
-                  children: [
-                    if (Navigator.of(context).canPop())
-                      IconButton(
-                        tooltip: '뒤로',
-                        icon: Icon(Icons.arrow_back, color: c.text),
-                        onPressed: () => Navigator.of(context).maybePop(),
-                      )
-                    else
-                      const SizedBox(width: 8),
-                    Flexible(
-                      child: InkWell(
-                        onTap: _openPicker,
-                        borderRadius: BorderRadius.circular(8),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 8),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  '${book.name} $curChapter장',
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w600,
-                                    color: c.text,
+                child: Builder(builder: (context) {
+                  // 좁은 화면(모바일)에서는 제목이 잘리지 않도록
+                  // 화살표를 숨긴다 — 장 이동은 스와이프로 가능.
+                  final compact = MediaQuery.sizeOf(context).width < 400;
+                  return Row(
+                    children: [
+                      if (Navigator.of(context).canPop())
+                        _headerIcon(
+                          tooltip: '뒤로',
+                          icon: Icon(Icons.arrow_back, color: c.text),
+                          onPressed: () => Navigator.of(context).maybePop(),
+                        )
+                      else
+                        const SizedBox(width: 8),
+                      Flexible(
+                        child: InkWell(
+                          onTap: _openPicker,
+                          borderRadius: BorderRadius.circular(8),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 8),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    '${book.name} $curChapter장',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: c.text,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 4),
-                              Icon(Icons.expand_more,
-                                  size: 20, color: c.text),
-                            ],
+                                const SizedBox(width: 2),
+                                Icon(Icons.expand_more,
+                                    size: 18, color: c.text),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      tooltip: '읽기 설정',
-                      icon: Icon(Icons.text_fields, color: c.text),
-                      onPressed: () => ReaderSettingsSheet.show(context),
-                    ),
-                    IconButton(
-                      tooltip: '이전 장',
-                      icon: Icon(
-                        Icons.chevron_left,
-                        color: _currentIndex > 0
-                            ? c.text
-                            : c.secondary.withValues(alpha: 0.4),
+                      const Spacer(),
+                      _headerIcon(
+                        tooltip: '읽기 설정',
+                        icon: Icon(Icons.text_fields, color: c.text),
+                        onPressed: () => ReaderSettingsSheet.show(context),
                       ),
-                      onPressed: _currentIndex > 0
-                          ? () => _goToPage(_currentIndex - 1)
-                          : null,
-                    ),
-                    IconButton(
-                      tooltip: '다음 장',
-                      icon: Icon(
-                        Icons.chevron_right,
-                        color: _currentIndex < BibleData.totalChapters - 1
-                            ? c.text
-                            : c.secondary.withValues(alpha: 0.4),
-                      ),
-                      onPressed: _currentIndex < BibleData.totalChapters - 1
-                          ? () => _goToPage(_currentIndex + 1)
-                          : null,
-                    ),
-                  ],
-                ),
+                      if (!compact) ...[
+                        _headerIcon(
+                          tooltip: '이전 장',
+                          icon: Icon(
+                            Icons.chevron_left,
+                            color: _currentIndex > 0
+                                ? c.text
+                                : c.secondary.withValues(alpha: 0.4),
+                          ),
+                          onPressed: _currentIndex > 0
+                              ? () => _goToPage(_currentIndex - 1)
+                              : null,
+                        ),
+                        _headerIcon(
+                          tooltip: '다음 장',
+                          icon: Icon(
+                            Icons.chevron_right,
+                            color: _currentIndex < BibleData.totalChapters - 1
+                                ? c.text
+                                : c.secondary.withValues(alpha: 0.4),
+                          ),
+                          onPressed:
+                              _currentIndex < BibleData.totalChapters - 1
+                                  ? () => _goToPage(_currentIndex + 1)
+                                  : null,
+                        ),
+                      ],
+                    ],
+                  );
+                }),
               ),
             ),
             Expanded(

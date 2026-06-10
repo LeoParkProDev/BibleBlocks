@@ -98,6 +98,35 @@ void main() {
     expect(find.text('공유'), findsOneWidget);
   });
 
+  testWidgets('좁은 화면: 긴 책 이름 제목이 잘리지 않도록 화살표 숨김', (tester) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        bibleTextServiceProvider.overrideWithValue(_FakeService()),
+        progressProvider.overrideWith(() => _FakeProgress({})),
+      ],
+      child: const MaterialApp(
+        home: ReaderScreen(bookIndex: 52, chapter: 3), // 데살로니가후서
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // 화살표 숨김 (스와이프로 이동), 제목은 온전히 표시
+    expect(find.byIcon(Icons.chevron_left), findsNothing);
+    expect(find.byIcon(Icons.chevron_right), findsNothing);
+    expect(find.text('데살로니가후서 3장'), findsOneWidget);
+  });
+
+  testWidgets('넓은 화면: 이전/다음 화살표 표시', (tester) async {
+    await tester.pumpWidget(_wrap({}));
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.chevron_left), findsOneWidget);
+    expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+  });
+
   testWidgets('아래로 스크롤하면 헤더가 숨고, 위로 올리면 다시 나타난다', (tester) async {
     await tester.pumpWidget(_wrap({}));
     await tester.pumpAndSettle();
