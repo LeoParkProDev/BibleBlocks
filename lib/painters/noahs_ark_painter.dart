@@ -296,6 +296,7 @@ class NoahsArkPainter extends CustomPainter {
   final double glowAnimation;
   final BlockCoord? hoveredBlock;
   final BlockCoord? pressedBlock;
+  final BlockCoord? selectedBlock;
   final double bounceAnimation;
   final Offset? cursorScenePos;
   final double rotationAngle;
@@ -308,6 +309,7 @@ class NoahsArkPainter extends CustomPainter {
     this.glowAnimation = 0.0,
     this.hoveredBlock,
     this.pressedBlock,
+    this.selectedBlock,
     this.bounceAnimation = 0.0,
     this.cursorScenePos,
     this.rotationAngle = 0.0,
@@ -509,12 +511,22 @@ class NoahsArkPainter extends CustomPainter {
         }
       }
 
-      // Hover highlight
+      // Selection (푸른톤) > hover (골드) 우선
+      final isSelected = selectedBlock != null &&
+          selectedBlock!.x == v.x &&
+          selectedBlock!.y == v.y &&
+          selectedBlock!.z == v.z;
       final isHovered = hoveredBlock != null &&
           hoveredBlock!.x == v.x &&
           hoveredBlock!.y == v.y &&
           hoveredBlock!.z == v.z;
-      if (isHovered) {
+      if (isSelected) {
+        _drawBlockHighlight(
+            canvas, origin, v.x.toDouble(), v.y.toDouble(), effectiveZ,
+            fill: AppColors.selectionBlue.withValues(alpha: 0.35),
+            outline: AppColors.selectionBlue,
+            strokeWidth: 2.0);
+      } else if (isHovered) {
         _drawBlockHighlight(
             canvas, origin, v.x.toDouble(), v.y.toDouble(), effectiveZ);
       }
@@ -628,9 +640,11 @@ class NoahsArkPainter extends CustomPainter {
   }
 
   void _drawBlockHighlight(
-      Canvas canvas, Offset origin, double x, double y, double z) {
-    final highlightPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.15);
+      Canvas canvas, Offset origin, double x, double y, double z,
+      {Color fill = const Color(0x26FFFFFF),
+      Color outline = AppColors.gold,
+      double strokeWidth = 1.5}) {
+    final highlightPaint = Paint()..color = fill;
     final p1 = project(x + 1, y, z, origin);
     final p2 = project(x + 1, y + 1, z, origin);
     final p3 = project(x, y + 1, z, origin);
@@ -663,9 +677,9 @@ class NoahsArkPainter extends CustomPainter {
     canvas.drawPath(rightPath, highlightPaint);
 
     final outlinePaint = Paint()
-      ..color = AppColors.gold
+      ..color = outline
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
+      ..strokeWidth = strokeWidth;
     canvas.drawPath(topPath, outlinePaint);
     canvas.drawPath(leftPath, outlinePaint);
     canvas.drawPath(rightPath, outlinePaint);
@@ -713,6 +727,7 @@ class NoahsArkPainter extends CustomPainter {
         oldDelegate.glowAnimation != glowAnimation ||
         oldDelegate.hoveredBlock != hoveredBlock ||
         oldDelegate.pressedBlock != pressedBlock ||
+        oldDelegate.selectedBlock != selectedBlock ||
         oldDelegate.bounceAnimation != bounceAnimation ||
         oldDelegate.cursorScenePos != cursorScenePos ||
         oldDelegate.rotationAngle != rotationAngle ||

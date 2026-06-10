@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -46,13 +44,13 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
 
   BlockCoord? _hoveredBlock;
   BlockCoord? _pressedBlock;
+  BlockCoord? _selectedBlock;
   Offset? _cursorScenePos;
   Offset? _pointerDownPos;
   Map<int, Set<int>> _latestProgressData = {};
   Map<int, Set<int>> _previousProgressData = {};
   Set<int> _newlyFilledBlocks = {};
   Size _canvasSize = Size.zero;
-  Timer? _tooltipTimer;
 
   @override
   void initState() {
@@ -85,7 +83,6 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
 
   @override
   void dispose() {
-    _tooltipTimer?.cancel();
     _glowController.dispose();
     _bounceController.dispose();
     _rotationController.dispose();
@@ -118,7 +115,8 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
 
   BlockCoord? _hitTest(Offset scenePos) {
     return switch (ref.read(modelProvider)) {
-      BibleModelType.book => _hitTest(scenePos),
+      BibleModelType.book =>
+        BlockHitTest.hitTest(scenePos, _canvasSize, _rotationAngle),
       BibleModelType.noahsArk => NoahsArkHitTest.hitTest(scenePos, _canvasSize, _rotationAngle),
       BibleModelType.solomonsTemple => SolomonsTempleHitTest.hitTest(scenePos, _canvasSize, _rotationAngle),
       BibleModelType.pilgrimMountain => null,
@@ -159,6 +157,7 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
             glowAnimation: _glowController.value,
             hoveredBlock: _hoveredBlock,
             pressedBlock: _pressedBlock,
+            selectedBlock: _selectedBlock,
             bounceAnimation: _bounceController.value,
             cursorScenePos: _cursorScenePos,
             rotationAngle: _rotationAngle,
@@ -171,6 +170,7 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
             glowAnimation: _glowController.value,
             hoveredBlock: _hoveredBlock,
             pressedBlock: _pressedBlock,
+            selectedBlock: _selectedBlock,
             bounceAnimation: _bounceController.value,
             cursorScenePos: _cursorScenePos,
             rotationAngle: _rotationAngle,
@@ -183,6 +183,7 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
             glowAnimation: _glowController.value,
             hoveredBlock: _hoveredBlock,
             pressedBlock: _pressedBlock,
+            selectedBlock: _selectedBlock,
             bounceAnimation: _bounceController.value,
             cursorScenePos: _cursorScenePos,
             rotationAngle: _rotationAngle,
@@ -219,11 +220,18 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
     );
   }
 
+  // 포인터 이동마다 전체 캔버스를 재페인트하지 않도록 3px 스로틀
+  bool _cursorMovedEnough(Offset scenePos) {
+    final last = _cursorScenePos;
+    return last == null || (scenePos - last).distance > 3;
+  }
+
   void _onPointerHover(PointerHoverEvent event) {
     if (_introController.isAnimating) return;
     if (_canvasSize == Size.zero) return;
     final scenePos = _transformController.toScene(event.localPosition);
     final hit = _hitTest(scenePos);
+    if (hit == _hoveredBlock && !_cursorMovedEnough(scenePos)) return;
     setState(() {
       _hoveredBlock = hit;
       _cursorScenePos = scenePos;
@@ -233,6 +241,7 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
   void _onPointerMove(PointerMoveEvent event) {
     if (_canvasSize == Size.zero) return;
     final scenePos = _transformController.toScene(event.localPosition);
+    if (!_cursorMovedEnough(scenePos)) return;
     setState(() {
       _cursorScenePos = scenePos;
     });
@@ -251,6 +260,9 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
       final hit = _hitTest(scenePos);
       if (hit != null) {
         _handleBlockTap(hit);
+      } else if (_selectedBlock != null) {
+        // 빈 곳 탭 → 선택 해제
+        setState(() => _selectedBlock = null);
       }
     }
     _pointerDownPos = null;
@@ -259,17 +271,115 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
   void _handleBlockTap(BlockCoord block) {
     setState(() {
       _pressedBlock = block;
-      _hoveredBlock = block;
+      _selectedBlock = block;
     });
     _bounceController.forward(from: 0.0).then((_) {
       if (mounted) setState(() => _pressedBlock = null);
     });
+  }
 
-    // Mobile: auto-dismiss tooltip after 2s
-    _tooltipTimer?.cancel();
-    _tooltipTimer = Timer(const Duration(seconds: 2), () {
-      if (mounted) setState(() => _hoveredBlock = null);
-    });
+  ({int globalStart, int globalEnd}) _blockChapterRangeOf(int blockIndex) {
+    return switch (ref.read(modelProvider)) {
+      BibleModelType.book => BlockHitTest.blockChapterRange(blockIndex),
+      BibleModelType.noahsArk => NoahsArkHitTest.blockChapterRange(blockIndex),
+      BibleModelType.solomonsTemple =>
+        SolomonsTempleHitTest.blockChapterRange(blockIndex),
+      BibleModelType.pilgrimMountain => (globalStart: 0, globalEnd: 0),
+    };
+  }
+
+  /// 우하단 선택 패널: 블록의 장 범위 + 읽음 수 + 읽으러 가기
+  Widget _buildSelectionPanel() {
+    final coord = _selectedBlock!;
+    final blockIndex = _toBlockIndex(coord);
+    if (blockIndex < 0) return const SizedBox.shrink();
+    final range = _blockChapterRangeOf(blockIndex);
+    if (range.globalEnd <= range.globalStart) return const SizedBox.shrink();
+
+    final (sb, sc) = BibleData.fromGlobalIndex(range.globalStart);
+    final (eb, ec) = BibleData.fromGlobalIndex(range.globalEnd - 1);
+    final label = sb == eb
+        ? (sc == ec
+            ? '${BibleData.books[sb].name} $sc장'
+            : '${BibleData.books[sb].name} $sc–$ec장')
+        : '${BibleData.books[sb].name} $sc장 – ${BibleData.books[eb].name} $ec장';
+
+    int readCount = 0;
+    int? firstUnread;
+    final total = range.globalEnd - range.globalStart;
+    for (int g = range.globalStart; g < range.globalEnd; g++) {
+      if (ProgressService.isGlobalIndexRead(_latestProgressData, g)) {
+        readCount++;
+      } else {
+        firstUnread ??= g;
+      }
+    }
+    final (tb, tc) = BibleData.fromGlobalIndex(firstUnread ?? range.globalStart);
+
+    return Positioned(
+      right: 16,
+      bottom: 84,
+      child: Container(
+        width: 230,
+        padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+        decoration: BoxDecoration(
+          color: const Color(0xF01A1A2E),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.selectionBlue),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => setState(() => _selectedBlock = null),
+                  child: const Icon(Icons.close, size: 18, color: Colors.white54),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '$readCount / $total장 읽음',
+              style: const TextStyle(
+                color: AppColors.selectionBlue,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => context.push('/reader/$tb/$tc'),
+                icon: const Icon(Icons.menu_book, size: 16),
+                label: const Text('읽으러 가기'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.selectionBlue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  textStyle: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _shareProgress() async {
@@ -348,6 +458,11 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
     final totalRead = ref.watch(totalReadProvider);
     final overallProgress = ref.watch(overallProgressProvider);
     final modelType = ref.watch(modelProvider);
+    ref.listen(modelProvider, (prev, next) {
+      if (prev != next && _selectedBlock != null) {
+        setState(() => _selectedBlock = null);
+      }
+    });
 
     return Scaffold(
       backgroundColor: AppColors.darkBg,
@@ -423,8 +538,10 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
                               return SizedBox.expand(
                                 child: modelType == BibleModelType.pilgrimMountain
                                     ? _buildPilgrimScene(data)
-                                    : CustomPaint(
-                                        painter: _buildPainter(modelType, data),
+                                    : RepaintBoundary(
+                                        child: CustomPaint(
+                                          painter: _buildPainter(modelType, data),
+                                        ),
                                       ),
                               );
                             },
@@ -514,6 +631,9 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
             // 툴팁
             if (_hoveredBlock != null && _canvasSize != Size.zero)
               _buildTooltip(),
+
+            // 블록 선택 패널 (우하단)
+            if (_selectedBlock != null) _buildSelectionPanel(),
 
             // 하단 회전 버튼 + 힌트
             Positioned(

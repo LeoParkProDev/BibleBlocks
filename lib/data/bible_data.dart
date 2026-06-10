@@ -93,24 +93,32 @@ class BibleData {
     BibleBook(index: 65, name: '요한계시록', nameEn: 'Revelation', chapters: 22, testament: Testament.new_),
   ];
 
-  /// 특정 책의 시작 장 인덱스 (전체 1189장 중)
-  static int chapterOffset(int bookIndex) {
-    int offset = 0;
-    for (int i = 0; i < bookIndex; i++) {
-      offset += books[i].chapters;
+  /// _cumulative[i] = i번째 책 앞까지의 누적 장수 (길이 67, 마지막 = 1189)
+  static final List<int> _cumulative = () {
+    final list = List<int>.filled(totalBooks + 1, 0);
+    for (int i = 0; i < totalBooks; i++) {
+      list[i + 1] = list[i] + books[i].chapters;
     }
-    return offset;
-  }
+    return list;
+  }();
 
-  /// 전역 장 인덱스(0~1188)에서 (bookIndex, chapter) 반환
+  /// 특정 책의 시작 장 인덱스 (전체 1189장 중)
+  static int chapterOffset(int bookIndex) => _cumulative[bookIndex];
+
+  /// 전역 장 인덱스(0~1188)에서 (bookIndex, chapter) 반환 — 이진 탐색 O(log 66)
+  /// (페인터가 프레임당 1,189회 호출하므로 선형 탐색이면 병목)
   static (int bookIndex, int chapter) fromGlobalIndex(int globalIndex) {
-    int remaining = globalIndex;
-    for (final book in books) {
-      if (remaining < book.chapters) {
-        return (book.index, remaining + 1);
+    if (globalIndex < 0) return (0, 1);
+    if (globalIndex >= totalChapters) return (65, 22); // fallback: 마지막 장
+    int lo = 0, hi = totalBooks - 1;
+    while (lo < hi) {
+      final mid = (lo + hi + 1) >> 1;
+      if (_cumulative[mid] <= globalIndex) {
+        lo = mid;
+      } else {
+        hi = mid - 1;
       }
-      remaining -= book.chapters;
     }
-    return (65, 22); // fallback: 마지막 장
+    return (lo, globalIndex - _cumulative[lo] + 1);
   }
 }

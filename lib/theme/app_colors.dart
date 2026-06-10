@@ -27,6 +27,9 @@ class AppColors {
   // 3D 뷰 다크 배경
   static const Color darkBg = Color(0xFF0a0a1a);
 
+  // 3D 블록 선택 (푸른톤)
+  static const Color selectionBlue = Color(0xFF6FA8DC);
+
   // 3D 블록 색상
   static const Color coverBrown = Color(0xFF8B4513);
   static const Color coverDark = Color(0xFF6B3410);
