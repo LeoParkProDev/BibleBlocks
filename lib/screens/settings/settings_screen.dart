@@ -100,35 +100,6 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ),
 
-              const SizedBox(height: 12),
-
-              // 개발자 후원하기
-              Container(
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: ListTile(
-                  leading: const Icon(Icons.favorite, color: AppColors.gold),
-                  title: const Text(
-                    '개발자 후원하기',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  subtitle: const Text(
-                    'BibleBlocks가 도움이 되셨다면 커피 한 잔 ☕',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  onTap: () => _openDonation(context),
-                ),
-              ),
-
               const SizedBox(height: 24),
 
               // 3D 모델 선택
@@ -208,6 +179,64 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   ),
                   onTap: () => _showResetDialog(context, ref),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // 개발자 후원하기
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: ListTile(
+                  leading: const Icon(Icons.favorite, color: AppColors.gold),
+                  title: const Text(
+                    '개발자 후원하기',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  subtitle: const Text(
+                    'BibleBlocks가 도움이 되셨다면 커피 한 잔 ☕',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  onTap: () => _openDonation(context),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // 성경 본문 출처 (개역한글 성명표시권 준수)
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: const ListTile(
+                  leading: Icon(Icons.menu_book, color: AppColors.textSecondary),
+                  title: Text(
+                    '성경 본문 출처',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  subtitle: Text(
+                    '성경전서 개역한글판 · 대한성서공회 (1961)\n저작권이 만료된 퍼블릭 도메인 본문을 사용합니다',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                      height: 1.5,
+                    ),
+                  ),
                 ),
               ),
             ],

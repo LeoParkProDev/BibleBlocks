@@ -21,9 +21,19 @@ class ChecklistScreen extends ConsumerStatefulWidget {
 class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
   ChecklistFilter _filter = ChecklistFilter.all;
   int? _expandedBookIndex;
+  bool _searching = false;
+  final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   List<BibleBook> get _filteredBooks {
+    final query = _searchController.text.trim();
     return BibleData.books.where((book) {
+      if (query.isNotEmpty && !book.name.contains(query)) return false;
       return switch (_filter) {
         ChecklistFilter.all => true,
         ChecklistFilter.oldTestament => book.testament == Testament.old,
@@ -62,8 +72,27 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
                   context.push('/reader/${lastPos.book}/${lastPos.chapter}'),
             ),
       appBar: AppBar(
-        title: const Text('체크리스트'),
+        title: _searching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  hintText: '책 이름 검색 (예: 시편)',
+                  border: InputBorder.none,
+                ),
+                style: const TextStyle(fontSize: 16),
+                onChanged: (_) => setState(() {}),
+              )
+            : const Text('체크리스트'),
         actions: [
+          IconButton(
+            tooltip: _searching ? '검색 닫기' : '책 검색',
+            icon: Icon(_searching ? Icons.close : Icons.search),
+            onPressed: () => setState(() {
+              if (_searching) _searchController.clear();
+              _searching = !_searching;
+            }),
+          ),
           IconButton(
             icon: const Icon(Icons.person_outline),
             onPressed: () => _showProfileDialog(context),

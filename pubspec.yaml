@@ -43,3 +43,9 @@ flutter:
   uses-material-design: true
   assets:
     - assets/bible/krv/
+  fonts:
+    # 한글 글리프를 번들 — 웹에서 gstatic 런타임 다운로드로 인한
+    # 폰트 깨짐(FOUT) 제거. Noto Sans KR 가변폰트 한글+라틴 서브셋.
+    - family: NotoSansKR
+      fonts:
+        - asset: assets/fonts/NotoSansKR.ttf

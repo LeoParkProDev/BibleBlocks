@@ -114,6 +114,40 @@ void main() {
     expect(find.text('1 / 1189장'), findsOneWidget);
   });
 
+  // 책 검색
+  testWidgets('검색: "시편" 입력 → 시편만 표시', (tester) async {
+    await tester.pumpWidget(buildTestApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.search));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '시편');
+    await tester.pumpAndSettle();
+
+    // TextField 입력값 자체도 '시편'이므로 리스트 내부만 검사
+    final inList = find.descendant(
+      of: find.byType(ListView),
+      matching: find.text('시편'),
+    );
+    expect(inList, findsOneWidget);
+    expect(find.text('창세기'), findsNothing);
+  });
+
+  testWidgets('검색 닫기(X) → 전체 목록 복원', (tester) async {
+    await tester.pumpWidget(buildTestApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.search));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '시편');
+    await tester.pumpAndSettle();
+    expect(find.text('창세기'), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+    expect(find.text('창세기'), findsOneWidget);
+  });
+
   // 이어 읽기: 마지막 위치가 있으면 FAB 표시
   testWidgets('마지막 읽은 위치가 있으면 "이어 읽기" 버튼 표시', (tester) async {
     SharedPreferences.setMockInitialValues({
