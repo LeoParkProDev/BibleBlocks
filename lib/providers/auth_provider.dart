@@ -21,11 +21,17 @@ class AuthNotifier extends AsyncNotifier<KakaoUserInfo?> {
     final service = ref.read(authServiceProvider);
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
+      // 핵심: 카카오 인증 + 사용자 정보. 이게 성공하면 로그인 성공으로 본다.
       final user = await service.login();
 
-      // 게스트 데이터 마이그레이션
-      final progressService = ref.read(progressServiceProvider);
-      await progressService.migrateGuestData(user.id.toString());
+      // 게스트 데이터 마이그레이션은 보조 작업 — 실패해도 로그인을 막지 않는다.
+      try {
+        final progressService = ref.read(progressServiceProvider);
+        await progressService.migrateGuestData(user.id.toString());
+      } catch (e) {
+        // ignore: avoid_print
+        print('게스트 데이터 마이그레이션 실패(무시): $e');
+      }
 
       // 게스트 모드 해제
       ref.read(isGuestProvider.notifier).set(false);

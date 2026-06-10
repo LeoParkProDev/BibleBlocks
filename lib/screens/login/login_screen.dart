@@ -12,6 +12,21 @@ class LoginScreen extends ConsumerWidget {
     final authState = ref.watch(authProvider);
     final isLoading = authState is AsyncLoading;
 
+    // 로그인 실패 시 실제 에러를 표면화 (조용히 메인으로 돌아가는 문제 진단/안내)
+    ref.listen(authProvider, (prev, next) {
+      if (next is AsyncError) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text('로그인 실패: ${next.error}'),
+              duration: const Duration(seconds: 8),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+      }
+    });
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Center(
