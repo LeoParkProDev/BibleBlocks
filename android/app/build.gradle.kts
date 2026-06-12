@@ -41,7 +41,8 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.leopark.bible_blocks"
+        // Play Console 등록 패키지명 — namespace(코드 패키지)는 그대로 둔다
+        applicationId = "com.bibleblock.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
