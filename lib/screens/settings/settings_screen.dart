@@ -1,21 +1,20 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/bible_data.dart';
 import '../../models/bible_model.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/donation_provider.dart';
 import '../../providers/model_provider.dart';
 import '../../providers/progress_provider.dart';
+import '../../services/donation_service.dart';
 import '../../services/progress_service.dart';
 import '../../services/share_service.dart';
 import '../../services/share_service_web.dart'
     if (dart.library.io) '../../services/share_service_stub.dart' as platform;
 import '../../theme/app_colors.dart';
-
-/// 개발자 후원 링크 (Toss toss.me). 발급 후 이 한 줄만 교체하면 됩니다.
-const String _tossDonationUrl = 'https://toss.me/YOUR_TOSS_ID';
+import 'donation_sheet.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -24,6 +23,7 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final totalRead = ref.watch(totalReadProvider);
     final selectedModel = ref.watch(modelProvider);
+    _listenDonationPhase(context, ref);
 
     return Scaffold(
       appBar: AppBar(title: const Text('설정')),
@@ -184,34 +184,35 @@ class SettingsScreen extends ConsumerWidget {
 
               const SizedBox(height: 12),
 
-              // 개발자 후원하기
-              Container(
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: ListTile(
-                  leading: const Icon(Icons.favorite, color: AppColors.gold),
-                  title: const Text(
-                    '개발자 후원하기',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textPrimary,
-                    ),
+              // 개발자 후원하기 (IAP — 웹은 스토어 결제가 없어 숨김)
+              if (!kIsWeb) ...[
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
                   ),
-                  subtitle: const Text(
-                    'BibleBlocks가 도움이 되셨다면 커피 한 잔 ☕',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
+                  child: ListTile(
+                    leading: const Icon(Icons.favorite, color: AppColors.gold),
+                    title: const Text(
+                      '개발자 후원하기',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
+                    subtitle: const Text(
+                      'BibleBlocks가 도움이 되셨다면 커피 한 잔 ☕',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    onTap: () => _openDonationSheet(context),
                   ),
-                  onTap: () => _openDonation(context),
                 ),
-              ),
-
-              const SizedBox(height: 12),
+                const SizedBox(height: 12),
+              ],
 
               // 성경 본문 출처 (개역한글 성명표시권 준수)
               Container(
@@ -280,22 +281,59 @@ class SettingsScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _openDonation(BuildContext context) async {
-    final uri = Uri.parse(_tossDonationUrl);
-    try {
-      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-      if (!ok && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('후원 페이지를 열 수 없습니다')),
-        );
+  /// 구매 단계 변화 감지 — 성공 시 감사 다이얼로그, 실패 시 스낵바.
+  void _listenDonationPhase(BuildContext context, WidgetRef ref) {
+    ref.listen<DonationPhase>(donationPhaseProvider, (previous, next) {
+      final notifier = ref.read(donationPhaseProvider.notifier);
+      switch (next) {
+        case DonationPhase.success:
+          notifier.reset();
+          _showThanksDialog(context);
+        case DonationPhase.error:
+          notifier.reset();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('결제를 완료하지 못했습니다')),
+          );
+        case DonationPhase.canceled:
+          notifier.reset();
+        case DonationPhase.idle:
+        case DonationPhase.pending:
+          break;
       }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('후원 페이지를 열 수 없습니다: $e')),
-        );
-      }
-    }
+    });
+  }
+
+  void _openDonationSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => const DonationSheet(),
+    );
+  }
+
+  void _showThanksDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.favorite, color: AppColors.gold),
+            SizedBox(width: 8),
+            Expanded(child: Text('후원 감사합니다!', style: TextStyle(fontSize: 18))),
+          ],
+        ),
+        content: const Text('보내주신 소중한 마음이\n더 나은 BibleBlocks를 만드는 데 쓰입니다 🙏'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showResetDialog(BuildContext context, WidgetRef ref) {
