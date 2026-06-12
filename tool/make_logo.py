@@ -1,121 +1,164 @@
-"""BibleBlocks 로고/아이콘 생성 — 아이소메트릭 성경책 + 골드 십자가 + 부유 블록.
-브랜드: 테라코타(#C47B5A) 커버, 골드(#D4A843) 십자가/블록, 다크 네이비(#0a0a1a) 배경.
-4x 슈퍼샘플링 후 1024로 다운스케일.  사용: python3 tool/make_logo.py"""
-import math
-from PIL import Image, ImageDraw, ImageFilter
+"""BibleBlocks 로고/아이콘 생성 — logo_v7.html 갤러리 #44 채택안.
+E5 변형(아이소 5층 블록 3/5 채움 + 좌측 골드 진척 게이지 + 커버/십자가) × 딥와인 팔레트.
+logo_v7.html의 SVG 지오메트리를 그대로 포팅한 뒤 헤드리스 크롬으로 래스터화 —
+갤러리에서 본 것과 동일한 렌더링 보장. 사용: python3 tool/make_logo.py"""
+import os
+import subprocess
+import tempfile
 
-SS = 4
-N = 1024 * SS
-COS30, SIN30 = 0.866, 0.5
-S = 60 * SS                      # iso unit(px)
-OX, OY = N / 2, N / 2 - 18 * SS  # 원점(화면 중앙)
+from PIL import Image
 
-# --- 색상 ---
-COVER_TOP = (210, 132, 96)
-COVER_L = (150, 84, 58)
-COVER_R = (178, 104, 74)
-PAGE = (255, 248, 231)
-PAGE_EDGE = (212, 168, 67)
-GOLD = (212, 168, 67)
-GOLD_HI = (245, 222, 140)
-IVORY = (255, 248, 231)
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+RASTER = 2048          # 크롬 래스터 크기 (1024로 다운스케일해 AA 품질 확보)
+OUT = 1024
 
+# --- 딥와인 팔레트 (logo_v7.html PAL[3] 'wine') ---
+BG = ('#260c14', '#451826')
+GLOW = '#5e2233'
+COVER = ('#9c3a4c', '#7d2a3a', '#5e1d2a')
+PAGE = ('#f3e7cd', '#e6d2ab', '#d3bb8c')
+GOLD = '#eec559'
+GOLD_D = '#b3852a'
+SHADOW = 'rgba(0,0,0,.42)'
+CROSS = '#f3d06a'
+EMPTY = '#5a2433'
 
-def proj(x, y, z):
-    return (OX + (x - y) * COS30 * S, OY + (x + y) * SIN30 * S - z * S)
-
-
-def shade(c, f):
-    return tuple(max(0, min(255, int(v * f))) for v in c)
-
-
-def box(d, x, y, z, dx, dy, dz, ctop, cl, cr):
-    p = {k: proj(*v) for k, v in {
-        'tA': (x, y, z + dz), 'tB': (x + dx, y, z + dz),
-        'tC': (x + dx, y + dy, z + dz), 'tD': (x, y + dy, z + dz),
-        'lA': (x, y + dy, z), 'lB': (x + dx, y + dy, z),
-        'rA': (x + dx, y, z), 'rB': (x + dx, y + dy, z),
-    }.items()}
-    # 왼쪽 면(y+dy), 오른쪽 면(x+dx), 윗면 순서로
-    d.polygon([p['lA'], p['lB'], p['tC'], p['tD']], fill=cl)
-    d.polygon([p['rA'], p['rB'], p['tC'], p['tB']], fill=cr)
-    d.polygon([p['tA'], p['tB'], p['tC'], p['tD']], fill=ctop)
+# --- E5 지오메트리 (logo_v7.html과 동일) ---
+R, S, U = 0.866, 0.5, 12.4
+W, D, LAYERS, LH, GAP = 3.4, 2.3, 5, 0.22, 0.045
+FILLED = 3                                   # stage 0.6 → 3/5 채움
+TOP_Z = LAYERS * (LH + GAP)
+COVER_T = 0.30
+HC = TOP_Z + COVER_T
+OX = 50 - ((W / 2 - D / 2) * R * U)
+OY = 58 - ((W / 2 + D / 2) * S * U - HC * U)
 
 
-img = Image.new('RGBA', (N, N), (0, 0, 0, 0))
-d = ImageDraw.Draw(img)
+def P(x, y, z):
+    return (OX + (x - y) * R * U, OY + (x + y) * S * U - z * U)
 
-# 배경: 다크 네이비 + 따뜻한 라디얼 글로우 (정사각 풀블리드, 플랫폼이 마스킹)
-d.rectangle([0, 0, N, N], fill=(10, 10, 26, 255))
-glow = Image.new('RGBA', (N, N), (0, 0, 0, 0))
-gd = ImageDraw.Draw(glow)
-gr = int(N * 0.42)
-gc = (OX, OY - 40 * SS)
-for i in range(gr, 0, -SS * 3):
-    a = int(60 * (1 - i / gr))
-    gd.ellipse([gc[0] - i, gc[1] - i, gc[0] + i, gc[1] + i], fill=(196, 123, 90, a))
-glow = glow.filter(ImageFilter.GaussianBlur(SS * 18))
-img = Image.alpha_composite(img, glow)
-d = ImageDraw.Draw(img)
 
-# 바닥 그림자
-sh = Image.new('RGBA', (N, N), (0, 0, 0, 0))
-sd = ImageDraw.Draw(sh)
-sc = proj(2.5, 3.0, 0)
-sd.ellipse([sc[0] - 3.6 * S, sc[1] - 1.1 * S, sc[0] + 3.6 * S, sc[1] + 1.1 * S],
-           fill=(0, 0, 0, 130))
-sh = sh.filter(ImageFilter.GaussianBlur(SS * 9))
-img = Image.alpha_composite(img, sh)
-d = ImageDraw.Draw(img)
+def poly(pts, fill, extra=''):
+    p = ' '.join(f'{a:.2f},{b:.2f}' for a, b in pts)
+    return f'<polygon points="{p}" fill="{fill}" {extra}/>'
 
-# 책 본체 (두꺼운 책, 가로로 누움)  x:0..5  y:0..6
-W, D = 5.0, 6.0
-# 아래쪽 페이지 더미(아이보리/골드 페이지 단면) → 그 위에 커버
-box(d, 0.18, 0.18, 0.0, W - 0.36, D - 0.36, 0.6, IVORY,
-    shade(PAGE_EDGE, 0.78), shade(PAGE_EDGE, 0.92))
-box(d, 0.0, 0.0, 0.55, W, D, 1.0, COVER_TOP, COVER_L, COVER_R)
 
-# 커버 윗면 골드 인셋 테두리 (프리미엄한 책 느낌)
-tz = 1.55
-inset = [proj(0.5, 0.5, tz), proj(W - 0.5, 0.5, tz),
-         proj(W - 0.5, D - 0.5, tz), proj(0.5, D - 0.5, tz)]
-d.line(inset + [inset[0]], fill=shade(GOLD, 0.95), width=int(0.07 * S), joint='curve')
+def box(x, y, z0, dx, dy, z1, top, left, right, extra=''):
+    t = [P(x, y, z1), P(x + dx, y, z1), P(x + dx, y + dy, z1), P(x, y + dy, z1)]
+    l = [P(x, y + dy, z1), P(x, y + dy, z0), P(x + dx, y + dy, z0), P(x + dx, y + dy, z1)]
+    r = [P(x + dx, y, z1), P(x + dx, y, z0), P(x + dx, y + dy, z0), P(x + dx, y + dy, z1)]
+    return poly(l, left, extra) + poly(r, right, extra) + poly(t, top, extra)
 
-# 윗면 골드 십자가 (화면공간, 입체 그림자 + 하이라이트) — 크고 중앙
-cx, cy = proj(W / 2, D / 2, tz)
-vw, vh = 0.46 * S, 1.85 * S   # 세로 기둥
-hw, hh = 1.25 * S, 0.46 * S   # 가로 기둥
-hy = cy - 0.34 * S            # 가로대(위쪽 1/3)
-for off, col in [(0.12 * S, (0, 0, 0, 95)), (0, GOLD)]:
-    d.rectangle([cx - vw / 2 + off, cy - vh / 2 + off,
-                 cx + vw / 2 + off, cy + vh / 2 + off], fill=col)
-    d.rectangle([cx - hw / 2 + off, hy - hh / 2 + off,
-                 cx + hw / 2 + off, hy + hh / 2 + off], fill=col)
-d.rectangle([cx - vw / 2, cy - vh / 2, cx - vw / 2 + 0.12 * S, cy + vh / 2], fill=GOLD_HI)
-d.rectangle([cx - hw / 2, hy - hh / 2, cx + hw / 2, hy - hh / 2 + 0.1 * S], fill=GOLD_HI)
 
-# 부유 블록 3개 — 오른쪽 위로 깔끔히 상승 ("블록이 채워진다")
-blocks = [(5.4, 0.2, 1.9, GOLD), (6.0, -0.5, 2.8, IVORY), (6.6, -1.2, 3.7, GOLD)]
-for bx, by, bz, col in sorted(blocks, key=lambda b: b[2]):
-    box(d, bx, by, bz, 0.85, 0.85, 0.85, col, shade(col, 0.6), shade(col, 0.8))
-# 최상단 골드 블록 글로우
-gb = Image.new('RGBA', (N, N), (0, 0, 0, 0))
-gbd = ImageDraw.Draw(gb)
-tc = proj(6.6 + 0.42, -1.2 + 0.42, 3.7 + 0.85)
-gbd.ellipse([tc[0] - 1.1 * S, tc[1] - 1.1 * S, tc[0] + 1.1 * S, tc[1] + 1.1 * S],
-            fill=(212, 168, 67, 90))
-gb = gb.filter(ImageFilter.GaussianBlur(SS * 10))
-img = Image.alpha_composite(img, gb)
-d = ImageDraw.Draw(img)
+def box_filled(x, y, z0, dx, dy, z1, gold_edge):
+    s = box(x, y, z0, dx, dy, z1, PAGE[0], PAGE[2], PAGE[1])
+    if gold_edge:
+        a, b, c = P(x + dx, y, z1), P(x + dx, y + dy, z1), P(x, y + dy, z1)
+        pts = f'{a[0]:.1f},{a[1]:.1f} {b[0]:.1f},{b[1]:.1f} {c[0]:.1f},{c[1]:.1f}'
+        s += f'<polyline points="{pts}" fill="none" stroke="{GOLD}" stroke-width="1" opacity=".85"/>'
+    return s
 
-# 다운스케일
-final = img.resize((1024, 1024), Image.LANCZOS)
-final.save('assets/icon/icon.png')
 
-# Android 적응형 아이콘 전경: 배경 투명, 안전영역(약 66%) 안에 마크만
-fg = Image.new('RGBA', (1024, 1024), (0, 0, 0, 0))
-# icon.png에서 배경 제외한 마크를 다시 그리기엔 복잡 → 전체를 축소해 중앙 배치(투명 캔버스)
-mark = final.crop((150, 150, 874, 874)).resize((620, 620), Image.LANCZOS)
-fg.paste(mark, (202, 202), mark)
-fg.save('assets/icon/icon_foreground.png')
-print('생성 완료: assets/icon/icon.png, icon_foreground.png')
+def box_empty(x, y, z0, dx, dy, z1, gold_stroke):
+    t = [P(x, y, z1), P(x + dx, y, z1), P(x + dx, y + dy, z1), P(x, y + dy, z1)]
+    l = [P(x, y + dy, z1), P(x, y + dy, z0), P(x + dx, y + dy, z0), P(x + dx, y + dy, z1)]
+    r = [P(x + dx, y, z1), P(x + dx, y, z0), P(x + dx, y + dy, z0), P(x + dx, y + dy, z1)]
+    stroke = GOLD if gold_stroke else PAGE[2]
+    sw, op = (1.1, '.95') if gold_stroke else (0.9, '.8')
+    s = poly(t, EMPTY, 'opacity=".55"') + poly(l, EMPTY, 'opacity=".75"') + poly(r, EMPTY, 'opacity=".65"')
+    e = f'stroke="{stroke}" stroke-width="{sw}" stroke-linejoin="round" opacity="{op}"'
+    return s + poly(l, 'none', e) + poly(r, 'none', e) + poly(t, 'none', e)
+
+
+def iso_cross(cx, cy, z, length, t, fill, extra=''):
+    a = t / 2
+    g = [(cx - a, cy - length), (cx + a, cy - length), (cx + a, cy - a), (cx + length, cy - a),
+         (cx + length, cy + a), (cx + a, cy + a), (cx + a, cy + length), (cx - a, cy + length),
+         (cx - a, cy + a), (cx - length, cy + a), (cx - length, cy - a), (cx - a, cy - a)]
+    return poly([P(px, py, z) for px, py in g], fill, extra)
+
+
+def mark():
+    """배경 제외 마크 전체 — 그림자·블록 스택·게이지·커버·십자가."""
+    s = ''
+    # 바닥 그림자
+    base = [P(-0.25, D + 0.25, 0), P(W + 0.25, D + 0.25, 0), P(W + 0.25, -0.25, 0), P(-0.25, -0.25, 0)]
+    s += poly([(x, y + 3.0) for x, y in base], SHADOW)
+    # 5층 블록 (3 채움 / 2 빈칸, 다음 칸은 골드 스트로크)
+    for i in range(LAYERS):
+        z0 = i * (LH + GAP)
+        z1 = z0 + LH
+        if i < FILLED:
+            s += box_filled(0, 0, z0, W, D, z1, i == FILLED - 1)
+        else:
+            s += box_empty(0, 0, z0, W, D, z1, i == FILLED)
+    # 좌측 진척 게이지 (3/5 골드)
+    gx, gy_b, gh, gw = 12, 72, 40, 5
+    s += (f'<rect x="{gx}" y="{gy_b - gh}" width="{gw}" height="{gh}" rx="2.5" '
+          f'fill="{EMPTY}" fill-opacity=".55" stroke="{PAGE[2]}" stroke-width=".8" stroke-opacity=".6"/>')
+    fh = gh * FILLED / LAYERS
+    s += f'<rect x="{gx}" y="{gy_b - fh}" width="{gw}" height="{fh}" rx="2.5" fill="{GOLD}" filter="url(#cg)"/>'
+    # 커버 + 윗면 골드 테두리
+    s += box(-0.10, -0.10, TOP_Z, W + 0.20, D + 0.20, HC, COVER[0], COVER[2], COVER[1])
+    tp = [P(-0.10, -0.10, HC), P(W + 0.10, -0.10, HC), P(W + 0.10, D + 0.10, HC), P(-0.10, D + 0.10, HC)]
+    s += poly(tp, 'none', f'stroke="{GOLD}" stroke-width=".7" opacity=".55"')
+    # 입체 십자가 (골드다크 베이스 + 글로우 골드)
+    s += iso_cross(W / 2, D / 2, HC, 0.95, 0.46, GOLD_D)
+    s += iso_cross(W / 2, D / 2, HC + 0.16, 0.95, 0.46, CROSS, 'filter="url(#cg)"')
+    return s
+
+
+DEFS = (f'<defs>'
+        f'<linearGradient id="g" x1="0" y1="0" x2="0" y2="1">'
+        f'<stop offset="0" stop-color="{BG[0]}"/><stop offset="1" stop-color="{BG[1]}"/></linearGradient>'
+        f'<radialGradient id="r" cx="50%" cy="40%" r="60%">'
+        f'<stop offset="0" stop-color="{GLOW}" stop-opacity=".95"/>'
+        f'<stop offset="100%" stop-color="{GLOW}" stop-opacity="0"/></radialGradient>'
+        f'<filter id="cg" x="-60%" y="-60%" width="220%" height="220%">'
+        f'<feGaussianBlur stdDeviation=".9" result="b"/>'
+        f'<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>'
+        f'</defs>')
+
+
+def svg(inner):
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" '
+            f'width="{RASTER}" height="{RASTER}">{DEFS}{inner}</svg>')
+
+
+def rasterize(svg_str, out_png):
+    with tempfile.NamedTemporaryFile('w', suffix='.svg', delete=False) as f:
+        f.write(svg_str)
+        path = f.name
+    subprocess.run([CHROME, '--headless=new', '--disable-gpu', '--hide-scrollbars',
+                    f'--screenshot={out_png}', f'--window-size={RASTER},{RASTER}',
+                    '--default-background-color=00000000', f'file://{path}'],
+                   check=True, capture_output=True)
+    os.unlink(path)
+
+
+def main():
+    icon_path = os.path.join(ROOT, 'assets/icon/icon.png')
+    fg_path = os.path.join(ROOT, 'assets/icon/icon_foreground.png')
+    with tempfile.TemporaryDirectory() as tmp:
+        # 1) 풀블리드 아이콘: 와인 그라데이션 배경 + 글로우 + 마크 (플랫폼이 코너 마스킹)
+        full = f'<rect width="100" height="100" fill="url(#g)"/><rect width="100" height="100" fill="url(#r)"/>{mark()}'
+        raw = os.path.join(tmp, 'icon.png')
+        rasterize(svg(full), raw)
+        Image.open(raw).convert('RGBA').resize((OUT, OUT), Image.LANCZOS).save(icon_path)
+        # 2) 적응형/로그인용 전경: 투명 배경에 마크만 → 안전영역(약 66%)에 맞춰 중앙 배치
+        raw_fg = os.path.join(tmp, 'fg.png')
+        rasterize(svg(mark()), raw_fg)
+        m = Image.open(raw_fg).convert('RGBA')
+        m = m.crop(m.getbbox())
+        safe = 660
+        scale = min(safe / m.width, safe / m.height)
+        m = m.resize((round(m.width * scale), round(m.height * scale)), Image.LANCZOS)
+        fg = Image.new('RGBA', (OUT, OUT), (0, 0, 0, 0))
+        fg.paste(m, ((OUT - m.width) // 2, (OUT - m.height) // 2), m)
+        fg.save(fg_path)
+    print(f'생성 완료: {icon_path}, {fg_path}')
+
+
+if __name__ == '__main__':
+    main()
