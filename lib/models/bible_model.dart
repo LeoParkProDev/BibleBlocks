@@ -5,6 +5,8 @@ enum BibleModelType {
   noahsArk,
   solomonsTemple,
   pilgrimMountain,
+  newJerusalem,
+  psalmTree,
 }
 
 extension BibleModelTypeExt on BibleModelType {
@@ -13,6 +15,8 @@ extension BibleModelTypeExt on BibleModelType {
         BibleModelType.noahsArk => '노아의 방주',
         BibleModelType.solomonsTemple => '솔로몬 성전',
         BibleModelType.pilgrimMountain => '천로역정',
+        BibleModelType.newJerusalem => '새 예루살렘',
+        BibleModelType.psalmTree => '시냇가의 나무',
       };
 
   String get description => switch (this) {
@@ -20,6 +24,8 @@ extension BibleModelTypeExt on BibleModelType {
         BibleModelType.noahsArk => '창세기 6-9장의 노아의 방주',
         BibleModelType.solomonsTemple => '왕상 6-7장의 솔로몬 성전',
         BibleModelType.pilgrimMountain => '읽은 장 수만큼 순례길이 밝아집니다',
+        BibleModelType.newJerusalem => '계 21장의 빛의 도성이 차오릅니다',
+        BibleModelType.psalmTree => '시편 1편 — 읽을수록 내 나무가 자랍니다',
       };
 
   IconData get icon => switch (this) {
@@ -27,6 +33,8 @@ extension BibleModelTypeExt on BibleModelType {
         BibleModelType.noahsArk => Icons.sailing,
         BibleModelType.solomonsTemple => Icons.account_balance,
         BibleModelType.pilgrimMountain => Icons.terrain,
+        BibleModelType.newJerusalem => Icons.location_city,
+        BibleModelType.psalmTree => Icons.park,
       };
 
   bool get supportsBlockInteraction => switch (this) {

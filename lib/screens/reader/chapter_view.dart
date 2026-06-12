@@ -119,7 +119,7 @@ class _ChapterViewState extends ConsumerState<ChapterView>
               onTap: () async {
                 Navigator.pop(sheetContext);
                 try {
-                  await Share.share(shareText);
+                  await SharePlus.instance.share(ShareParams(text: shareText));
                 } catch (_) {
                   messenger.showSnackBar(
                     const SnackBar(content: Text('공유를 사용할 수 없습니다')),

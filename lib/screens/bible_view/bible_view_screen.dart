@@ -8,9 +8,13 @@ import '../../data/bible_data.dart';
 import '../../models/bible_model.dart';
 import '../../painters/block_hit_test.dart';
 import '../../painters/isometric_bible_painter.dart';
+import '../../painters/new_jerusalem_hit_test.dart';
+import '../../painters/new_jerusalem_painter.dart' show NewJerusalemPainter, cityVoxels;
 import '../../painters/noahs_ark_hit_test.dart';
 import '../../painters/noahs_ark_painter.dart';
 import '../../painters/pilgrim_c3_pro_painter.dart';
+import '../../painters/psalm_tree_hit_test.dart';
+import '../../painters/psalm_tree_painter.dart' show PsalmTreePainter, treeStructuralVoxels;
 import '../../painters/solomons_temple_hit_test.dart';
 import '../../painters/solomons_temple_painter.dart' show SolomonsTemplePainter, templeVoxels;
 import '../../providers/auth_provider.dart';
@@ -119,6 +123,8 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
         BlockHitTest.hitTest(scenePos, _canvasSize, _rotationAngle),
       BibleModelType.noahsArk => NoahsArkHitTest.hitTest(scenePos, _canvasSize, _rotationAngle),
       BibleModelType.solomonsTemple => SolomonsTempleHitTest.hitTest(scenePos, _canvasSize, _rotationAngle),
+      BibleModelType.newJerusalem => NewJerusalemHitTest.hitTest(scenePos, _canvasSize, _rotationAngle),
+      BibleModelType.psalmTree => PsalmTreeHitTest.hitTest(scenePos, _canvasSize, _rotationAngle),
       BibleModelType.pilgrimMountain => null,
     };
   }
@@ -128,6 +134,8 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
       BibleModelType.book => BlockHitTest.toBlockIndex(coord),
       BibleModelType.noahsArk => NoahsArkHitTest.toBlockIndex(coord),
       BibleModelType.solomonsTemple => SolomonsTempleHitTest.toBlockIndex(coord),
+      BibleModelType.newJerusalem => NewJerusalemHitTest.toBlockIndex(coord),
+      BibleModelType.psalmTree => PsalmTreeHitTest.toBlockIndex(coord),
       BibleModelType.pilgrimMountain => -1,
     };
   }
@@ -137,6 +145,8 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
       BibleModelType.book => BlockHitTest.tooltipText(blockIndex, _latestProgressData),
       BibleModelType.noahsArk => NoahsArkHitTest.tooltipText(blockIndex, _latestProgressData),
       BibleModelType.solomonsTemple => SolomonsTempleHitTest.tooltipText(blockIndex, _latestProgressData),
+      BibleModelType.newJerusalem => NewJerusalemHitTest.tooltipText(blockIndex, _latestProgressData),
+      BibleModelType.psalmTree => PsalmTreeHitTest.tooltipText(blockIndex, _latestProgressData),
       BibleModelType.pilgrimMountain => '',
     };
   }
@@ -146,6 +156,8 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
       BibleModelType.book => BlockHitTest.blockTopCenter(coord, _canvasSize, _rotationAngle),
       BibleModelType.noahsArk => NoahsArkHitTest.blockTopCenter(coord, _canvasSize, _rotationAngle),
       BibleModelType.solomonsTemple => SolomonsTempleHitTest.blockTopCenter(coord, _canvasSize, _rotationAngle),
+      BibleModelType.newJerusalem => NewJerusalemHitTest.blockTopCenter(coord, _canvasSize, _rotationAngle),
+      BibleModelType.psalmTree => PsalmTreeHitTest.blockTopCenter(coord, _canvasSize, _rotationAngle),
       BibleModelType.pilgrimMountain => Offset.zero,
     };
   }
@@ -179,6 +191,32 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
             introAnimation: _introController.value,
           ),
       BibleModelType.solomonsTemple => SolomonsTemplePainter(
+            progressData: data,
+            glowAnimation: _glowController.value,
+            hoveredBlock: _hoveredBlock,
+            pressedBlock: _pressedBlock,
+            selectedBlock: _selectedBlock,
+            bounceAnimation: _bounceController.value,
+            cursorScenePos: _cursorScenePos,
+            rotationAngle: _rotationAngle,
+            newlyFilledBlocks: _newlyFilledBlocks,
+            fillAnimation: _fillController.value,
+            introAnimation: _introController.value,
+          ),
+      BibleModelType.newJerusalem => NewJerusalemPainter(
+            progressData: data,
+            glowAnimation: _glowController.value,
+            hoveredBlock: _hoveredBlock,
+            pressedBlock: _pressedBlock,
+            selectedBlock: _selectedBlock,
+            bounceAnimation: _bounceController.value,
+            cursorScenePos: _cursorScenePos,
+            rotationAngle: _rotationAngle,
+            newlyFilledBlocks: _newlyFilledBlocks,
+            fillAnimation: _fillController.value,
+            introAnimation: _introController.value,
+          ),
+      BibleModelType.psalmTree => PsalmTreePainter(
             progressData: data,
             glowAnimation: _glowController.value,
             hoveredBlock: _hoveredBlock,
@@ -284,6 +322,10 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
       BibleModelType.noahsArk => NoahsArkHitTest.blockChapterRange(blockIndex),
       BibleModelType.solomonsTemple =>
         SolomonsTempleHitTest.blockChapterRange(blockIndex),
+      BibleModelType.newJerusalem =>
+        NewJerusalemHitTest.blockChapterRange(blockIndex),
+      BibleModelType.psalmTree =>
+        PsalmTreeHitTest.blockChapterRange(blockIndex),
       BibleModelType.pilgrimMountain => (globalStart: 0, globalEnd: 0),
     };
   }
@@ -487,6 +529,8 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
                     BibleModelType.book => IsometricBiblePainter.totalPageBlocks,
                     BibleModelType.noahsArk => ArkVoxels.structuralCount,
                     BibleModelType.solomonsTemple => templeVoxels.length,
+                    BibleModelType.newJerusalem => cityVoxels.length,
+                    BibleModelType.psalmTree => treeStructuralVoxels.length,
                     BibleModelType.pilgrimMountain => 0,
                   };
                   for (int i = 0; i < totalBlocks; i++) {
@@ -494,6 +538,8 @@ class _BibleViewScreenState extends ConsumerState<BibleViewScreen>
                       BibleModelType.book => BlockHitTest.blockChapterRange(i),
                       BibleModelType.noahsArk => NoahsArkHitTest.blockChapterRange(i),
                       BibleModelType.solomonsTemple => SolomonsTempleHitTest.blockChapterRange(i),
+                      BibleModelType.newJerusalem => NewJerusalemHitTest.blockChapterRange(i),
+                      BibleModelType.psalmTree => PsalmTreeHitTest.blockChapterRange(i),
                       BibleModelType.pilgrimMountain => (globalStart: 0, globalEnd: 0),
                     };
                     bool wasFullBefore = true;

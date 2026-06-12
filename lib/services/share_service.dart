@@ -36,7 +36,9 @@ class ShareService {
         mimeType: 'image/png',
         name: 'bible_blocks_share.png',
       );
-      await Share.shareXFiles([xfile], text: shareText);
+      await SharePlus.instance.share(
+        ShareParams(files: [xfile], text: shareText),
+      );
     }
   }
 
