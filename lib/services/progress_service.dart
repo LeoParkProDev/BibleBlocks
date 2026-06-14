@@ -105,6 +105,24 @@ class ProgressService {
     return updated;
   }
 
+  /// 여러 장을 한 번에 '읽음'으로 추가(토글 아님 — 이미 읽은 장은 그대로).
+  /// 읽기 계획의 "오늘 분량 모두 읽음"에 사용. 변경된 전체 상태 반환.
+  Future<Map<int, Set<int>>> markRead(
+    Map<int, Set<int>> current,
+    Iterable<(int bookIndex, int chapter)> refs,
+  ) async {
+    final updated = <int, Set<int>>{
+      for (final entry in current.entries) entry.key: Set<int>.from(entry.value),
+    };
+    var changed = false;
+    for (final (bookIndex, chapter) in refs) {
+      final chapters = updated.putIfAbsent(bookIndex, () => <int>{});
+      if (chapters.add(chapter)) changed = true;
+    }
+    if (changed) await _save(updated);
+    return updated;
+  }
+
   /// 게스트 데이터를 유저 키로 마이그레이션.
   /// 게스트 로컬 데이터가 있고 Firestore에 데이터가 없을 때만 복사.
   Future<void> migrateGuestData(String targetUserId) async {

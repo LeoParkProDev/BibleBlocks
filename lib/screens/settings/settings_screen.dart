@@ -15,6 +15,7 @@ import '../../services/share_service_web.dart'
     if (dart.library.io) '../../services/share_service_stub.dart' as platform;
 import '../../theme/app_colors.dart';
 import 'donation_sheet.dart';
+import 'notification_settings_card.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -99,6 +100,11 @@ class SettingsScreen extends ConsumerWidget {
                   onTap: () => _shareProgress(context, ref),
                 ),
               ),
+
+              const SizedBox(height: 24),
+
+              // 오늘의 말씀 알림
+              const NotificationSettingsCard(),
 
               const SizedBox(height: 24),
 

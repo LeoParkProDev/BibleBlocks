@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/kakao_user_info.dart';
 import '../services/auth_service.dart';
+import '../services/plan_service.dart';
+import '../services/streak_service.dart';
 import 'progress_provider.dart';
 
 final authServiceProvider = Provider((ref) => AuthService());
@@ -28,6 +30,8 @@ class AuthNotifier extends AsyncNotifier<KakaoUserInfo?> {
       try {
         final progressService = ref.read(progressServiceProvider);
         await progressService.migrateGuestData(user.id.toString());
+        await StreakService().migrateGuestData(user.id.toString());
+        await PlanService().migrateGuestData(user.id.toString());
       } catch (e) {
         // ignore: avoid_print
         print('게스트 데이터 마이그레이션 실패(무시): $e');

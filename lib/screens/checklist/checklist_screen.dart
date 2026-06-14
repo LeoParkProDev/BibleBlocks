@@ -8,6 +8,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/last_position_provider.dart';
 import '../../providers/progress_provider.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/streak_chip.dart';
 
 enum ChecklistFilter { all, oldTestament, newTestament, unfinished }
 
@@ -120,13 +121,19 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
                             color: AppColors.textPrimary,
                           ),
                         ),
-                        Text(
-                          '${(overallProgress * 100).toStringAsFixed(1)}%',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                          ),
+                        Row(
+                          children: [
+                            const StreakChip(),
+                            const SizedBox(width: 10),
+                            Text(
+                              '${(overallProgress * 100).toStringAsFixed(1)}%',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

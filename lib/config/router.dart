@@ -7,16 +7,18 @@ import '../providers/auth_provider.dart';
 import '../screens/bible_view/bible_view_screen.dart';
 import '../screens/checklist/checklist_screen.dart';
 import '../screens/login/login_screen.dart';
+import '../screens/plans/plans_screen.dart';
 import '../screens/reader/reader_screen.dart';
 import '../screens/settings/settings_screen.dart';
+import '../theme/app_colors.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
 /// Auth + Guest 상태 변화를 GoRouter에 알려주는 Listenable
 final _routerListenableProvider = Provider<ValueNotifier<int>>((ref) {
   final notifier = ValueNotifier(0);
-  ref.listen(authProvider, (_, __) => notifier.value++);
-  ref.listen(isGuestProvider, (_, __) => notifier.value++);
+  ref.listen(authProvider, (_, _) => notifier.value++);
+  ref.listen(isGuestProvider, (_, _) => notifier.value++);
   return notifier;
 });
 
@@ -92,6 +94,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
+                path: '/plans',
+                builder: (context, state) => const PlansScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: '/settings',
                 builder: (context, state) => const SettingsScreen(),
               ),
@@ -115,6 +125,10 @@ class ScaffoldWithNavBar extends StatelessWidget {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: navigationShell.currentIndex,
         onTap: (index) => navigationShell.goBranch(index),
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: AppColors.primary,
+        unselectedItemColor: AppColors.textSecondary,
+        showUnselectedLabels: true,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.view_in_ar),
@@ -123,6 +137,10 @@ class ScaffoldWithNavBar extends StatelessWidget {
           BottomNavigationBarItem(
             icon: Icon(Icons.checklist),
             label: '체크리스트',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_today),
+            label: '계획',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),

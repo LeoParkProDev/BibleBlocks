@@ -100,16 +100,17 @@ void main() {
   });
 
   // I-05
-  testWidgets('I-05: BottomNavigationBar 아이템 3개', (tester) async {
+  testWidgets('I-05: BottomNavigationBar 아이템 4개', (tester) async {
     await tester.pumpWidget(buildTestApp());
     await tester.pumpAndSettle();
 
     final navBar = tester.widget<BottomNavigationBar>(
       find.byType(BottomNavigationBar),
     );
-    expect(navBar.items.length, 3);
+    expect(navBar.items.length, 4);
     expect(navBar.items[0].label, '블록뷰');
     expect(navBar.items[1].label, '체크리스트');
-    expect(navBar.items[2].label, '설정');
+    expect(navBar.items[2].label, '계획');
+    expect(navBar.items[3].label, '설정');
   });
 }
