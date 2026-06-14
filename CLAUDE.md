@@ -73,7 +73,12 @@ screens/ → providers/ → services/progress_service.dart → Firestore (로그
 ### Vercel (현재 사용 중)
 - URL: `https://bible-blocks-omega.vercel.app`
 - Vercel 프로젝트명: `bible-blocks`
+- **Vercel 스코프: `Leo's projects` (`leos-projects-032d5cbd`)** ← `Evergreen` 팀 아님! 링크 시 반드시 이 스코프 지정
 - GitHub: `LeoParkProDev/BibleBlocks`
+
+> ⚠️ 배포 전 `.vercel/project.json`이 없으면 `vercel link --yes`를 그냥 쓰지 말 것 —
+> 기본 스코프(Evergreen)에 동명의 새 프로젝트를 잘못 생성한다.
+> 반드시 `vercel link --yes --scope leos-projects-032d5cbd --project bible-blocks`로 링크.
 
 ### 배포 명령
 ```bash
