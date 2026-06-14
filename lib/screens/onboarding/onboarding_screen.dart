@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/reading_plans.dart';
+import '../../l10n/l10n.dart';
 import '../../painters/isometric_bible_painter.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/onboarding_provider.dart';
@@ -100,9 +101,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                   if (_page < _pageCount - 1)
                     TextButton(
                       onPressed: _finishing ? null : _finish,
-                      child: const Text(
-                        '건너뛰기',
-                        style: TextStyle(color: AppColors.textSecondary),
+                      child: Text(
+                        context.l10n.skip,
+                        style: const TextStyle(color: AppColors.textSecondary),
                       ),
                     ),
                 ],
@@ -161,14 +162,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 
   // ── 1. 의도 ────────────────────────────────────────────────────
   Widget _intentPage() {
-    const options = [
-      ('통독', '성경 전체를 천천히 끝까지', Icons.menu_book),
-      ('매일 한 장', '부담 없이 하루 한 장씩', Icons.wb_sunny_outlined),
-      ('주제별 묵상', '필요한 주제의 말씀으로', Icons.spa_outlined),
+    final t = context.l10n;
+    final options = [
+      (t.onbIntentReadAll, t.onbIntentReadAllDesc, Icons.menu_book),
+      (t.onbIntentDaily, t.onbIntentDailyDesc, Icons.wb_sunny_outlined),
+      (t.onbIntentTopic, t.onbIntentTopicDesc, Icons.spa_outlined),
     ];
     return _pageScaffold(
-      title: '어떻게 읽고 싶으세요?',
-      subtitle: '마음에 드는 방식을 골라보세요. 언제든 바꿀 수 있어요.',
+      title: t.onbIntentTitle,
+      subtitle: t.onbIntentSubtitle,
       children: [
         for (final (label, desc, icon) in options)
           Padding(
@@ -190,9 +192,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 
   // ── 2. 읽기 계획 ───────────────────────────────────────────────
   Widget _planPage() {
+    final t = context.l10n;
     return _pageScaffold(
-      title: '짧은 계획으로 시작해볼까요?',
-      subtitle: '끝까지 읽을 확률이 가장 높은 단기 계획이에요.',
+      title: t.onbPlanTitle,
+      subtitle: t.onbPlanSubtitle,
       children: [
         for (final plan in ReadingPlans.all)
           Padding(
@@ -209,9 +212,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
         Center(
           child: TextButton(
             onPressed: _next,
-            child: const Text(
-              '나중에 정할게요',
-              style: TextStyle(color: AppColors.textSecondary),
+            child: Text(
+              context.l10n.onbPlanLater,
+              style: const TextStyle(color: AppColors.textSecondary),
             ),
           ),
         ),
@@ -221,9 +224,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 
   // ── 3. 알림 (모바일) ───────────────────────────────────────────
   Widget _notificationPage() {
+    final t = context.l10n;
     return _pageScaffold(
-      title: '매일 이 시간에 말씀 한 구절',
-      subtitle: '잊지 않도록 부드럽게 알려드려요. 원치 않으면 건너뛰어도 돼요.',
+      title: t.onbNotifTitle,
+      subtitle: t.onbNotifSubtitle,
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
@@ -254,7 +258,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                   );
                   if (picked != null) setState(() => _notifTime = picked);
                 },
-                child: const Text('시간 변경'),
+                child: Text(t.onbNotifChangeTime),
               ),
             ],
           ),
@@ -271,15 +275,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
             backgroundColor: AppColors.primary,
             minimumSize: const Size.fromHeight(48),
           ),
-          child: const Text('알림 받기'),
+          child: Text(t.onbNotifEnable),
         ),
         const SizedBox(height: 4),
         Center(
           child: TextButton(
             onPressed: _next,
-            child: const Text(
-              '건너뛰기',
-              style: TextStyle(color: AppColors.textSecondary),
+            child: Text(
+              t.skip,
+              style: const TextStyle(color: AppColors.textSecondary),
             ),
           ),
         ),
@@ -289,11 +293,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
 
   // ── 4. 첫 블록 ─────────────────────────────────────────────────
   Widget _firstBlockPage() {
+    final t = context.l10n;
     return _pageScaffold(
-      title: _blockChecked ? '첫 블록이 채워졌어요! 🎉' : '첫 블록을 채워볼까요?',
-      subtitle: _blockChecked
-          ? '한 장을 읽을 때마다 이렇게 성경책이 블록으로 차올라요.'
-          : '창세기 1장을 읽음으로 체크하면 3D 성경책에 첫 블록이 들어갑니다.',
+      title: _blockChecked ? t.onbFirstTitleDone : t.onbFirstTitle,
+      subtitle:
+          _blockChecked ? t.onbFirstSubtitleDone : t.onbFirstSubtitle,
       children: [
         ClipRRect(
           borderRadius: BorderRadius.circular(16),
@@ -333,7 +337,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
               minimumSize: const Size.fromHeight(50),
             ),
             icon: const Icon(Icons.check),
-            label: const Text('창세기 1장 읽음 체크'),
+            label: Text(t.onbFirstCheck),
           )
         else
           FilledButton(
@@ -350,7 +354,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: Colors.white),
                   )
-                : const Text('시작하기'),
+                : Text(t.onbStart),
           ),
       ],
     );

@@ -1,0 +1,62 @@
+{
+  "@@locale": "en",
+
+  "navBlocks": "Blocks",
+  "navChecklist": "Checklist",
+  "navPlans": "Plans",
+  "navSettings": "Settings",
+
+  "loginTagline": "Visualize your Bible reading",
+  "loginKakao": "Sign in with Kakao",
+  "loginGuest": "Continue as a guest",
+
+  "settingsTitle": "Settings",
+  "settingsLanguage": "Language",
+  "settingsLanguageSubtitle": "Choose the app display language",
+  "languageKorean": "한국어",
+  "languageEnglish": "English",
+  "languageSystem": "System default",
+  "settingsShareTitle": "Share via KakaoTalk",
+  "settingsShareSubtitle": "Share your 3D Bible and progress with friends",
+  "settingsModelTitle": "3D model",
+  "settingsResetTitle": "Reset progress",
+  "settingsResetSubtitle": "Delete all reading records",
+  "settingsDonateTitle": "Support the developer",
+  "settingsDonateSubtitle": "If BibleBlocks helped you, buy us a coffee ☕",
+  "settingsSourceTitle": "Bible text source",
+
+  "skip": "Skip",
+  "onbIntentTitle": "How would you like to read?",
+  "onbIntentSubtitle": "Pick a style that suits you. You can change it anytime.",
+  "onbIntentReadAll": "Read it all",
+  "onbIntentReadAllDesc": "The whole Bible, slowly to the end",
+  "onbIntentDaily": "A chapter a day",
+  "onbIntentDailyDesc": "One easy chapter each day",
+  "onbIntentTopic": "Topical reflection",
+  "onbIntentTopicDesc": "Verses for what you need",
+
+  "onbPlanTitle": "Start with a short plan?",
+  "onbPlanSubtitle": "Short plans have the highest chance of finishing.",
+  "onbPlanLater": "I'll decide later",
+
+  "onbNotifTitle": "A verse at this time every day",
+  "onbNotifSubtitle": "A gentle daily reminder. Skip if you'd rather not.",
+  "onbNotifChangeTime": "Change time",
+  "onbNotifEnable": "Turn on reminders",
+
+  "onbFirstTitle": "Fill your first block?",
+  "onbFirstTitleDone": "Your first block is filled! 🎉",
+  "onbFirstSubtitle": "Mark Genesis 1 as read to place your first block in the 3D Bible.",
+  "onbFirstSubtitleDone": "Each chapter you read fills the Bible with another block like this.",
+  "onbFirstCheck": "Mark Genesis 1 as read",
+  "onbStart": "Start",
+
+  "notesTitle": "My notes & bookmarks",
+  "notesSearchHint": "Search verses & notes",
+  "notesFilterAll": "All",
+  "notesFilterBookmark": "Bookmarks",
+  "notesFilterNote": "Notes",
+  "notesFilterHighlight": "Highlights",
+  "notesEmptyTitle": "No saved verses yet",
+  "notesEmptySubtitle": "While reading, tap a verse to highlight, bookmark, or add a note"
+}

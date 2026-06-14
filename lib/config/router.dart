@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../data/bible_data.dart';
+import '../l10n/l10n.dart';
 import '../providers/auth_provider.dart';
 import '../providers/onboarding_provider.dart';
 import '../screens/bible_view/bible_view_screen.dart';
@@ -157,6 +158,7 @@ class ScaffoldWithNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.l10n;
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: BottomNavigationBar(
@@ -166,22 +168,22 @@ class ScaffoldWithNavBar extends StatelessWidget {
         selectedItemColor: AppColors.primary,
         unselectedItemColor: AppColors.textSecondary,
         showUnselectedLabels: true,
-        items: const [
+        items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.view_in_ar),
-            label: '블록뷰',
+            icon: const Icon(Icons.view_in_ar),
+            label: t.navBlocks,
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.checklist),
-            label: '체크리스트',
+            icon: const Icon(Icons.checklist),
+            label: t.navChecklist,
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today),
-            label: '계획',
+            icon: const Icon(Icons.calendar_today),
+            label: t.navPlans,
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: '설정',
+            icon: const Icon(Icons.settings),
+            label: t.navSettings,
           ),
         ],
       ),

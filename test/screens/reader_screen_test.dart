@@ -69,6 +69,21 @@ void main() {
     expect(find.text('✓ 이 장 읽음 완료'), findsOneWidget);
   });
 
+  // 회귀: 저작권 푸터까지 스크롤(몰입모드로 헤더 숨김)해도 읽음 버튼 유지
+  testWidgets('끝까지 스크롤 후 더 내려도 읽음 버튼이 사라지지 않는다', (tester) async {
+    await tester.pumpWidget(_wrap({}));
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.byType(ListView), const Offset(0, -3000));
+    await tester.pumpAndSettle();
+    expect(find.text('✓ 이 장 읽음 완료'), findsOneWidget);
+
+    // 바닥에서 한 번 더 아래로 — 역방향 스크롤로 헤더(크롬)가 숨더라도
+    await tester.drag(find.byType(ListView), const Offset(0, -400));
+    await tester.pumpAndSettle();
+    expect(find.text('✓ 이 장 읽음 완료'), findsOneWidget);
+  });
+
   testWidgets('이미 읽은 장은 해제 버튼이 즉시 표시', (tester) async {
     await tester.pumpWidget(_wrap({
       0: {1},

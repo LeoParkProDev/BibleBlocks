@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/l10n.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme/app_colors.dart';
 
@@ -11,6 +12,7 @@ class LoginScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
     final isLoading = authState is AsyncLoading;
+    final t = context.l10n;
 
     // 로그인 실패 시 실제 에러를 표면화 (조용히 메인으로 돌아가는 문제 진단/안내)
     ref.listen(authProvider, (prev, next) {
@@ -67,9 +69,9 @@ class LoginScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  '성경 읽기 시각화',
-                  style: TextStyle(
+                Text(
+                  t.loginTagline,
+                  style: const TextStyle(
                     fontSize: 15,
                     color: AppColors.textSecondary,
                   ),
@@ -98,9 +100,9 @@ class LoginScreen extends ConsumerWidget {
                             height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text(
-                            '카카오 로그인',
-                            style: TextStyle(
+                        : Text(
+                            t.loginKakao,
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
@@ -116,9 +118,9 @@ class LoginScreen extends ConsumerWidget {
                       : () {
                           ref.read(isGuestProvider.notifier).set(true);
                         },
-                  child: const Text(
-                    '게스트로 시작',
-                    style: TextStyle(
+                  child: Text(
+                    t.loginGuest,
+                    style: const TextStyle(
                       fontSize: 14,
                       color: AppColors.textSecondary,
                     ),

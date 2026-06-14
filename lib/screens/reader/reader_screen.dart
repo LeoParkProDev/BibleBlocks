@@ -115,8 +115,11 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                 const <int, Set<int>>{})[curBook]
             ?.contains(curChapter) ??
         false;
+    // 장 끝까지 읽어 끝에 도달하면(또는 이미 읽은 장이면) '읽음' 버튼을 보인다.
+    // 끝 도달 시에는 몰입 모드로 헤더가 숨겨져 있어도 버튼은 항상 노출 —
+    // 그렇지 않으면 저작권 푸터까지 스크롤했을 때 버튼이 안 떠 읽음 처리가 막힌다.
     final showButton =
-        (_reachedEnds.contains(_currentIndex) || isRead) && _chromeVisible;
+        _reachedEnds.contains(_currentIndex) || (isRead && _chromeVisible);
 
     return Scaffold(
       backgroundColor: c.background,

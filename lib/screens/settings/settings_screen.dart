@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/bible_data.dart';
+import '../../l10n/l10n.dart';
 import '../../models/bible_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/donation_provider.dart';
+import '../../providers/locale_provider.dart';
 import '../../providers/model_provider.dart';
 import '../../providers/progress_provider.dart';
 import '../../services/donation_service.dart';
@@ -24,10 +26,11 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final totalRead = ref.watch(totalReadProvider);
     final selectedModel = ref.watch(modelProvider);
+    final t = context.l10n;
     _listenDonationPhase(context, ref);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('설정')),
+      appBar: AppBar(title: Text(t.settingsTitle)),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 600),
@@ -83,16 +86,16 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 child: ListTile(
                   leading: const Icon(Icons.share, color: AppColors.gold),
-                  title: const Text(
-                    '카카오톡으로 공유하기',
-                    style: TextStyle(
+                  title: Text(
+                    t.settingsShareTitle,
+                    style: const TextStyle(
                       fontSize: 14,
                       color: AppColors.textPrimary,
                     ),
                   ),
-                  subtitle: const Text(
-                    '3D 성경책과 진행도를 친구에게 공유해보세요',
-                    style: TextStyle(
+                  subtitle: Text(
+                    t.settingsShareSubtitle,
+                    style: const TextStyle(
                       fontSize: 12,
                       color: AppColors.textSecondary,
                     ),
@@ -118,11 +121,11 @@ class SettingsScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(16, 14, 16, 4),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
                       child: Text(
-                        '3D 모델',
-                        style: TextStyle(
+                        t.settingsModelTitle,
+                        style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary,
@@ -173,13 +176,13 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 child: ListTile(
                   leading: const Icon(Icons.refresh, color: Colors.red),
-                  title: const Text(
-                    '진행도 초기화',
-                    style: TextStyle(color: Colors.red),
+                  title: Text(
+                    t.settingsResetTitle,
+                    style: const TextStyle(color: Colors.red),
                   ),
-                  subtitle: const Text(
-                    '모든 읽기 기록을 삭제합니다',
-                    style: TextStyle(
+                  subtitle: Text(
+                    t.settingsResetSubtitle,
+                    style: const TextStyle(
                       fontSize: 12,
                       color: AppColors.textSecondary,
                     ),
@@ -200,16 +203,16 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                   child: ListTile(
                     leading: const Icon(Icons.favorite, color: AppColors.gold),
-                    title: const Text(
-                      '개발자 후원하기',
-                      style: TextStyle(
+                    title: Text(
+                      t.settingsDonateTitle,
+                      style: const TextStyle(
                         fontSize: 14,
                         color: AppColors.textPrimary,
                       ),
                     ),
-                    subtitle: const Text(
-                      'BibleBlocks가 도움이 되셨다면 커피 한 잔 ☕',
-                      style: TextStyle(
+                    subtitle: Text(
+                      t.settingsDonateSubtitle,
+                      style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.textSecondary,
                       ),
@@ -227,16 +230,17 @@ class SettingsScreen extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: AppColors.border),
                 ),
-                child: const ListTile(
-                  leading: Icon(Icons.menu_book, color: AppColors.textSecondary),
+                child: ListTile(
+                  leading: const Icon(Icons.menu_book,
+                      color: AppColors.textSecondary),
                   title: Text(
-                    '성경 본문 출처',
-                    style: TextStyle(
+                    t.settingsSourceTitle,
+                    style: const TextStyle(
                       fontSize: 14,
                       color: AppColors.textPrimary,
                     ),
                   ),
-                  subtitle: Text(
+                  subtitle: const Text(
                     '성경전서 개역한글판 · 대한성서공회 (1961)\n저작권이 만료된 퍼블릭 도메인 본문을 사용합니다',
                     style: TextStyle(
                       fontSize: 12,
@@ -246,9 +250,84 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                 ),
               ),
+
+              const SizedBox(height: 24),
+
+              // 언어 선택 (최하단)
+              _languageCard(context, ref, t),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// 언어 선택 카드 — 한국어 / English / 시스템 기본.
+  Widget _languageCard(BuildContext context, WidgetRef ref, AppLocalizations t) {
+    final current = ref.watch(localeProvider).value;
+    final selected = current?.languageCode; // null = 시스템 기본
+
+    Widget tile(String label, String? code) {
+      final isSelected = selected == code;
+      return ListTile(
+        title: Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        trailing: isSelected
+            ? const Icon(Icons.check_circle, color: AppColors.primary, size: 20)
+            : const Icon(Icons.circle_outlined,
+                color: AppColors.border, size: 20),
+        onTap: () => ref
+            .read(localeProvider.notifier)
+            .setLocale(code == null ? null : Locale(code)),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+            child: Row(
+              children: [
+                const Icon(Icons.language, size: 20, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Text(
+                  t.settingsLanguage,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(44, 2, 16, 4),
+            child: Text(
+              t.settingsLanguageSubtitle,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          tile(t.languageKorean, 'ko'),
+          tile(t.languageEnglish, 'en'),
+          tile(t.languageSystem, null),
+        ],
       ),
     );
   }

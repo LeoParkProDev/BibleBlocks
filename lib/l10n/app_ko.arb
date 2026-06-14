@@ -1,0 +1,62 @@
+{
+  "@@locale": "ko",
+
+  "navBlocks": "블록뷰",
+  "navChecklist": "체크리스트",
+  "navPlans": "계획",
+  "navSettings": "설정",
+
+  "loginTagline": "성경 읽기 시각화",
+  "loginKakao": "카카오 로그인",
+  "loginGuest": "게스트로 시작",
+
+  "settingsTitle": "설정",
+  "settingsLanguage": "언어",
+  "settingsLanguageSubtitle": "앱 표시 언어를 선택하세요",
+  "languageKorean": "한국어",
+  "languageEnglish": "English",
+  "languageSystem": "시스템 기본",
+  "settingsShareTitle": "카카오톡으로 공유하기",
+  "settingsShareSubtitle": "3D 성경책과 진행도를 친구에게 공유해보세요",
+  "settingsModelTitle": "3D 모델",
+  "settingsResetTitle": "진행도 초기화",
+  "settingsResetSubtitle": "모든 읽기 기록을 삭제합니다",
+  "settingsDonateTitle": "개발자 후원하기",
+  "settingsDonateSubtitle": "BibleBlocks가 도움이 되셨다면 커피 한 잔 ☕",
+  "settingsSourceTitle": "성경 본문 출처",
+
+  "skip": "건너뛰기",
+  "onbIntentTitle": "어떻게 읽고 싶으세요?",
+  "onbIntentSubtitle": "마음에 드는 방식을 골라보세요. 언제든 바꿀 수 있어요.",
+  "onbIntentReadAll": "통독",
+  "onbIntentReadAllDesc": "성경 전체를 천천히 끝까지",
+  "onbIntentDaily": "매일 한 장",
+  "onbIntentDailyDesc": "부담 없이 하루 한 장씩",
+  "onbIntentTopic": "주제별 묵상",
+  "onbIntentTopicDesc": "필요한 주제의 말씀으로",
+
+  "onbPlanTitle": "짧은 계획으로 시작해볼까요?",
+  "onbPlanSubtitle": "끝까지 읽을 확률이 가장 높은 단기 계획이에요.",
+  "onbPlanLater": "나중에 정할게요",
+
+  "onbNotifTitle": "매일 이 시간에 말씀 한 구절",
+  "onbNotifSubtitle": "잊지 않도록 부드럽게 알려드려요. 원치 않으면 건너뛰어도 돼요.",
+  "onbNotifChangeTime": "시간 변경",
+  "onbNotifEnable": "알림 받기",
+
+  "onbFirstTitle": "첫 블록을 채워볼까요?",
+  "onbFirstTitleDone": "첫 블록이 채워졌어요! 🎉",
+  "onbFirstSubtitle": "창세기 1장을 읽음으로 체크하면 3D 성경책에 첫 블록이 들어갑니다.",
+  "onbFirstSubtitleDone": "한 장을 읽을 때마다 이렇게 성경책이 블록으로 차올라요.",
+  "onbFirstCheck": "창세기 1장 읽음 체크",
+  "onbStart": "시작하기",
+
+  "notesTitle": "내 노트·북마크",
+  "notesSearchHint": "구절·메모 검색",
+  "notesFilterAll": "전체",
+  "notesFilterBookmark": "북마크",
+  "notesFilterNote": "노트",
+  "notesFilterHighlight": "하이라이트",
+  "notesEmptyTitle": "아직 표시한 구절이 없어요",
+  "notesEmptySubtitle": "본문을 읽다가 절을 탭해 하이라이트·북마크·노트를 남겨보세요"
+}

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../data/bible_data.dart';
+import '../../l10n/l10n.dart';
 import '../../models/verse_annotation.dart';
 import '../../providers/annotation_provider.dart';
 import '../../theme/app_colors.dart';
@@ -57,9 +58,10 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
   Widget build(BuildContext context) {
     final all = ref.watch(annotationProvider).value ?? const {};
     final items = _visible(all);
+    final t = context.l10n;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('내 노트·북마크')),
+      appBar: AppBar(title: Text(t.notesTitle)),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 600),
@@ -71,7 +73,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                   controller: _searchController,
                   onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
-                    hintText: '구절·메모 검색',
+                    hintText: t.notesSearchHint,
                     prefixIcon: const Icon(Icons.search),
                     isDense: true,
                     border: OutlineInputBorder(
@@ -85,13 +87,13 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 child: Row(
                   children: [
-                    _chip('전체', NotesFilter.all),
+                    _chip(t.notesFilterAll, NotesFilter.all),
                     const SizedBox(width: 8),
-                    _chip('북마크', NotesFilter.bookmark),
+                    _chip(t.notesFilterBookmark, NotesFilter.bookmark),
                     const SizedBox(width: 8),
-                    _chip('노트', NotesFilter.note),
+                    _chip(t.notesFilterNote, NotesFilter.note),
                     const SizedBox(width: 8),
-                    _chip('하이라이트', NotesFilter.highlight),
+                    _chip(t.notesFilterHighlight, NotesFilter.highlight),
                   ],
                 ),
               ),
@@ -138,28 +140,30 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
   }
 
   Widget _emptyState() {
+    final t = context.l10n;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        children: const [
-          Icon(Icons.bookmarks_outlined,
+        children: [
+          const Icon(Icons.bookmarks_outlined,
               size: 44, color: AppColors.textSecondary),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Text(
-            '아직 표시한 구절이 없어요',
-            style: TextStyle(
+            t.notesEmptyTitle,
+            style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
             ),
           ),
-          SizedBox(height: 4),
+          const SizedBox(height: 4),
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: 40),
+            padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Text(
-              '본문을 읽다가 절을 탭해 하이라이트·북마크·노트를 남겨보세요',
+              t.notesEmptySubtitle,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+              style:
+                  const TextStyle(fontSize: 13, color: AppColors.textSecondary),
             ),
           ),
         ],
