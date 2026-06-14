@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:bible_blocks/models/verse_annotation.dart';
 import 'package:bible_blocks/services/bible_text_service.dart';
+import 'package:bible_blocks/providers/annotation_provider.dart';
 import 'package:bible_blocks/providers/bible_text_provider.dart';
 import 'package:bible_blocks/providers/progress_provider.dart';
 import 'package:bible_blocks/screens/reader/reader_screen.dart';
@@ -29,10 +31,19 @@ class _FakeProgress extends ProgressNotifier {
   }
 }
 
+/// 빈 주석으로 고정된 가짜 notifier(테스트 결정성 확보).
+class _FakeAnnotation extends AnnotationNotifier {
+  _FakeAnnotation(this._data);
+  final Map<String, VerseAnnotation> _data;
+  @override
+  Future<Map<String, VerseAnnotation>> build() async => _data;
+}
+
 Widget _wrap(Map<int, Set<int>> initial) => ProviderScope(
       overrides: [
         bibleTextServiceProvider.overrideWithValue(_FakeService()),
         progressProvider.overrideWith(() => _FakeProgress(initial)),
+        annotationProvider.overrideWith(() => _FakeAnnotation({})),
       ],
       child: const MaterialApp(home: ReaderScreen(bookIndex: 0, chapter: 1)),
     );
@@ -87,7 +98,7 @@ void main() {
     expect(find.text('세피아'), findsOneWidget);
   });
 
-  testWidgets('절을 탭하면 복사/공유 액션시트가 열린다', (tester) async {
+  testWidgets('절을 탭하면 주석/공유 액션시트가 열린다', (tester) async {
     await tester.pumpWidget(_wrap({}));
     await tester.pumpAndSettle();
 
@@ -95,7 +106,33 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('복사'), findsOneWidget);
-    expect(find.text('공유'), findsOneWidget);
+    expect(find.text('이미지로 공유'), findsOneWidget);
+    expect(find.text('텍스트로 공유'), findsOneWidget);
+    expect(find.text('북마크'), findsOneWidget);
+    expect(find.text('노트 추가'), findsOneWidget);
+  });
+
+  testWidgets('절을 탭해 북마크하면 북마크 아이콘이 본문에 표시된다', (tester) async {
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        bibleTextServiceProvider.overrideWithValue(_FakeService()),
+        progressProvider.overrideWith(() => _FakeProgress({})),
+        // 실제 게스트(SharedPreferences) 경로로 토글되도록 override 없이 사용
+      ],
+      child: const MaterialApp(home: ReaderScreen(bookIndex: 0, chapter: 1)),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.textContaining('verse-text-0'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('북마크'));
+    await tester.pumpAndSettle();
+    // 시트 닫기
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.bookmark), findsWidgets);
   });
 
   testWidgets('좁은 화면: 긴 책 이름 제목이 잘리지 않도록 화살표 숨김', (tester) async {

@@ -1,28 +1,31 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart';
 
-import '../../data/bible_data.dart';
+import '../../models/verse_annotation.dart';
+import '../../providers/annotation_provider.dart';
 import '../../providers/bible_text_provider.dart';
 import '../../providers/reader_prefs_provider.dart';
 import '../../services/bible_text_service.dart';
 import '../../theme/app_colors.dart';
+import 'verse_action_sheet.dart';
 
 /// PageView의 한 페이지 = 한 장의 본문. 스크롤 위치를 유지하고,
 /// 끝까지 읽으면 [onReachedEnd]를 한 번 호출한다(짧은 장은 즉시).
-/// 절을 탭하면 복사/공유 액션시트가 열린다.
+/// 절을 탭하면 하이라이트·북마크·노트·공유 액션시트가 열린다.
+/// [focusVerse]가 주어지면(검색/노트에서 진입) 해당 절로 스크롤하고 잠깐 강조한다.
 class ChapterView extends ConsumerStatefulWidget {
   const ChapterView({
     super.key,
     required this.bookIndex,
     required this.chapter,
     required this.onReachedEnd,
+    this.focusVerse,
   });
 
   final int bookIndex;
   final int chapter;
   final VoidCallback onReachedEnd;
+  final int? focusVerse;
 
   @override
   ConsumerState<ChapterView> createState() => _ChapterViewState();
@@ -31,7 +34,9 @@ class ChapterView extends ConsumerStatefulWidget {
 class _ChapterViewState extends ConsumerState<ChapterView>
     with AutomaticKeepAliveClientMixin {
   final _scroll = ScrollController();
+  final _focusKey = GlobalKey();
   bool _reported = false;
+  bool _focusHandled = false;
   int? _selectedVerse;
 
   @override
@@ -63,75 +68,34 @@ class _ChapterViewState extends ConsumerState<ChapterView>
     super.dispose();
   }
 
-  Future<void> _showVerseActions(BibleVerse v) async {
-    final c = ref.read(readerPrefsProvider).theme.colors;
-    final book = BibleData.books[widget.bookIndex];
-    final citation = '${book.name} ${widget.chapter}:${v.number}';
-    final shareText = '"${v.text}"\n\n— $citation (개역한글)';
-    final messenger = ScaffoldMessenger.of(context);
-
-    setState(() => _selectedVerse = v.number);
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: c.background,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: Row(
-                children: [
-                  const Icon(Icons.menu_book,
-                      size: 16, color: AppColors.primary),
-                  const SizedBox(width: 8),
-                  Text(
-                    citation,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: c.text,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            ListTile(
-              leading: Icon(Icons.copy, color: c.text),
-              title: Text('복사', style: TextStyle(color: c.text)),
-              onTap: () async {
-                await Clipboard.setData(ClipboardData(text: shareText));
-                if (sheetContext.mounted) Navigator.pop(sheetContext);
-                messenger.showSnackBar(
-                  const SnackBar(
-                    content: Text('구절을 복사했습니다'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.share, color: c.text),
-              title: Text('공유', style: TextStyle(color: c.text)),
-              onTap: () async {
-                Navigator.pop(sheetContext);
-                try {
-                  await SharePlus.instance.share(ShareParams(text: shareText));
-                } catch (_) {
-                  messenger.showSnackBar(
-                    const SnackBar(content: Text('공유를 사용할 수 없습니다')),
-                  );
-                }
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-    if (mounted) setState(() => _selectedVerse = null);
+  /// 검색/노트 진입 시 해당 절로 이동 + 잠깐 강조.
+  void _maybeFocusVerse(int verseCount) {
+    if (widget.focusVerse == null || _focusHandled || !_scroll.hasClients) {
+      return;
+    }
+    _focusHandled = true;
+    // 절 높이가 가변이라 정확한 오프셋을 알 수 없으므로, 대략 점프 후
+    // 실제로 빌드된 위젯을 ensureVisible로 정밀 보정한다.
+    final estimate = (widget.focusVerse! - 1) * 64.0;
+    _scroll.jumpTo(estimate.clamp(0.0, _scroll.position.maxScrollExtent));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final ctx = _focusKey.currentContext;
+      if (ctx != null) {
+        Scrollable.ensureVisible(
+          ctx,
+          alignment: 0.25,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+      setState(() => _selectedVerse = widget.focusVerse);
+      Future.delayed(const Duration(milliseconds: 2600), () {
+        if (mounted && _selectedVerse == widget.focusVerse) {
+          setState(() => _selectedVerse = null);
+        }
+      });
+    });
   }
 
   @override
@@ -141,6 +105,10 @@ class _ChapterViewState extends ConsumerState<ChapterView>
     final c = prefs.theme.colors;
     final textAsync = ref.watch(
       chapterTextProvider((book: widget.bookIndex, chapter: widget.chapter)),
+    );
+    // 이 장의 주석만 절 번호로 추려둔다.
+    final annotations = ref.watch(
+      annotationProvider.select((s) => _chapterAnnotations(s.value)),
     );
 
     return textAsync.when(
@@ -152,13 +120,14 @@ class _ChapterViewState extends ConsumerState<ChapterView>
         ),
       ),
       data: (verses) {
-        // 스크롤이 필요 없는 짧은 장이면 끝 도달로 간주
         WidgetsBinding.instance.addPostFrameCallback((_) {
+          // 스크롤이 필요 없는 짧은 장이면 끝 도달로 간주
           if (!_reported &&
               _scroll.hasClients &&
               _scroll.position.maxScrollExtent <= 0) {
             _report();
           }
+          _maybeFocusVerse(verses.length);
         });
         return Center(
           child: ConstrainedBox(
@@ -166,6 +135,7 @@ class _ChapterViewState extends ConsumerState<ChapterView>
             child: ListView.builder(
               controller: _scroll,
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+              cacheExtent: 1200,
               itemCount: verses.length + 1,
               itemBuilder: (context, i) {
                 if (i == verses.length) {
@@ -182,17 +152,28 @@ class _ChapterViewState extends ConsumerState<ChapterView>
                   );
                 }
                 final v = verses[i];
+                final annotation = annotations[v.number];
                 final selected = _selectedVerse == v.number;
+                final isFocus = widget.focusVerse == v.number;
+
+                Color? bg;
+                if (selected) {
+                  bg = AppColors.primary.withValues(alpha: 0.14);
+                } else if (annotation?.color != null) {
+                  bg = Color(annotation!.color!).withValues(alpha: 0.42);
+                }
+
                 return GestureDetector(
+                  key: isFocus ? _focusKey : null,
                   behavior: HitTestBehavior.opaque,
                   onTap: () => _showVerseActions(v),
                   child: Container(
                     margin: const EdgeInsets.symmetric(vertical: 3),
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 2, horizontal: 4),
-                    decoration: selected
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+                    decoration: bg != null
                         ? BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.12),
+                            color: bg,
                             borderRadius: BorderRadius.circular(6),
                           )
                         : null,
@@ -214,6 +195,18 @@ class _ChapterViewState extends ConsumerState<ChapterView>
                             color: c.text,
                           ),
                         ),
+                        if (annotation?.bookmarked ?? false)
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: Icon(
+                                Icons.bookmark,
+                                size: prefs.fontSize * 0.7,
+                                color: AppColors.gold,
+                              ),
+                            ),
+                          ),
                       ]),
                     ),
                   ),
@@ -224,5 +217,31 @@ class _ChapterViewState extends ConsumerState<ChapterView>
         );
       },
     );
+  }
+
+  /// 전체 주석 맵에서 현재 (book, chapter)에 해당하는 것만 절 번호→주석으로.
+  Map<int, VerseAnnotation> _chapterAnnotations(
+    Map<String, VerseAnnotation>? all,
+  ) {
+    if (all == null) return const {};
+    final result = <int, VerseAnnotation>{};
+    for (final a in all.values) {
+      if (a.bookIndex == widget.bookIndex && a.chapter == widget.chapter) {
+        result[a.verse] = a;
+      }
+    }
+    return result;
+  }
+
+  Future<void> _showVerseActions(BibleVerse v) async {
+    setState(() => _selectedVerse = v.number);
+    await VerseActionSheet.show(
+      context,
+      bookIndex: widget.bookIndex,
+      chapter: widget.chapter,
+      verse: v.number,
+      verseText: v.text,
+    );
+    if (mounted) setState(() => _selectedVerse = null);
   }
 }

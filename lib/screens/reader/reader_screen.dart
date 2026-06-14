@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../data/bible_data.dart';
 import '../../providers/last_position_provider.dart';
@@ -18,10 +19,14 @@ class ReaderScreen extends ConsumerStatefulWidget {
     super.key,
     required this.bookIndex,
     required this.chapter,
+    this.focusVerse,
   });
 
   final int bookIndex;
   final int chapter;
+
+  /// 검색/노트에서 진입 시 강조·스크롤할 절(1-based). 없으면 일반 진입.
+  final int? focusVerse;
 
   @override
   ConsumerState<ReaderScreen> createState() => _ReaderScreenState();
@@ -30,6 +35,7 @@ class ReaderScreen extends ConsumerStatefulWidget {
 class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   late final PageController _pageController;
   late int _currentIndex;
+  late final int _initialIndex;
   final Set<int> _reachedEnds = {};
   bool _chromeVisible = true;
 
@@ -38,6 +44,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     super.initState();
     _currentIndex =
         BibleData.chapterOffset(widget.bookIndex) + (widget.chapter - 1);
+    _initialIndex = _currentIndex;
     _pageController = PageController(initialPage: _currentIndex);
     WidgetsBinding.instance.addPostFrameCallback((_) => _savePosition());
   }
@@ -173,6 +180,11 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                       ),
                       const Spacer(),
                       _headerIcon(
+                        tooltip: '본문 검색',
+                        icon: Icon(Icons.search, color: c.text),
+                        onPressed: () => context.push('/search'),
+                      ),
+                      _headerIcon(
                         tooltip: '읽기 설정',
                         icon: Icon(Icons.text_fields, color: c.text),
                         onPressed: () => ReaderSettingsSheet.show(context),
@@ -228,6 +240,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                       key: ValueKey(i),
                       bookIndex: b,
                       chapter: ch,
+                      focusVerse: i == _initialIndex ? widget.focusVerse : null,
                       onReachedEnd: () {
                         if (mounted) {
                           setState(() {

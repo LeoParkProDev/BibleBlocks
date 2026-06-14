@@ -4,10 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../data/bible_data.dart';
 import '../providers/auth_provider.dart';
+import '../providers/onboarding_provider.dart';
 import '../screens/bible_view/bible_view_screen.dart';
 import '../screens/checklist/checklist_screen.dart';
 import '../screens/login/login_screen.dart';
+import '../screens/notes/notes_screen.dart';
+import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/plans/plans_screen.dart';
+import '../screens/search/search_screen.dart';
 import '../screens/reader/reader_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../theme/app_colors.dart';
@@ -19,6 +23,7 @@ final _routerListenableProvider = Provider<ValueNotifier<int>>((ref) {
   final notifier = ValueNotifier(0);
   ref.listen(authProvider, (_, _) => notifier.value++);
   ref.listen(isGuestProvider, (_, _) => notifier.value++);
+  ref.listen(onboardingProvider, (_, _) => notifier.value++);
   return notifier;
 });
 
@@ -32,10 +37,21 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final authState = ref.read(authProvider);
       final guestState = ref.read(isGuestProvider);
+      final onboardingState = ref.read(onboardingProvider);
 
       // 로딩 중이면 리다이렉트 없음
-      if (authState is AsyncLoading || guestState is AsyncLoading) {
+      if (authState is AsyncLoading ||
+          guestState is AsyncLoading ||
+          onboardingState is AsyncLoading) {
         return null;
+      }
+
+      final onboardingDone = onboardingState.value ?? false;
+      final goingToOnboarding = state.matchedLocation == '/onboarding';
+
+      // 온보딩 미완료면 로그인보다 먼저 온보딩(게스트/로그인 이전 노출)
+      if (!onboardingDone) {
+        return goingToOnboarding ? null : '/onboarding';
       }
 
       final isLoggedIn = authState.value != null;
@@ -46,7 +62,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         return goingToLogin ? null : '/login';
       }
 
-      if (goingToLogin) {
+      // 로그인/게스트 상태에서 로그인·온보딩 경로는 메인으로
+      if (goingToLogin || goingToOnboarding) {
         return '/bible';
       }
 
@@ -54,8 +71,23 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
         path: '/login',
         builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/notes',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const NotesScreen(),
+      ),
+      GoRoute(
+        path: '/search',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) =>
+            SearchScreen(initialQuery: state.uri.queryParameters['q']),
       ),
       GoRoute(
         path: '/reader/:book/:chapter',
@@ -67,7 +99,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           final safeBook = book.clamp(0, BibleData.totalBooks - 1);
           final safeChapter =
               chapter.clamp(1, BibleData.books[safeBook].chapters);
-          return ReaderScreen(bookIndex: safeBook, chapter: safeChapter);
+          final verse = int.tryParse(state.uri.queryParameters['verse'] ?? '');
+          return ReaderScreen(
+            bookIndex: safeBook,
+            chapter: safeChapter,
+            focusVerse: verse,
+          );
         },
       ),
       StatefulShellRoute.indexedStack(

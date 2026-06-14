@@ -95,6 +95,11 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
             }),
           ),
           IconButton(
+            tooltip: '내 노트·북마크',
+            icon: const Icon(Icons.bookmarks_outlined),
+            onPressed: () => context.push('/notes'),
+          ),
+          IconButton(
             icon: const Icon(Icons.person_outline),
             onPressed: () => _showProfileDialog(context),
           ),
@@ -172,6 +177,10 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
                 ),
               ),
 
+              // 본문 검색 진입 — 책 이름 검색 중이면 같은 단어로 본문도 찾도록
+              if (_searching && _searchController.text.trim().isNotEmpty)
+                _fullTextSearchBanner(),
+
               // 책 리스트
               Expanded(
                 child: progressAsync.when(
@@ -182,6 +191,44 @@ class _ChecklistScreenState extends ConsumerState<ChecklistScreen> {
                   error: (e, _) => Center(child: Text('오류: $e')),
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _fullTextSearchBanner() {
+    final query = _searchController.text.trim();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => context.push('/search?q=${Uri.encodeComponent(query)}'),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.primaryBg,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.primaryBorder),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.manage_search, size: 18, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  "본문에서 '$query' 검색",
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+              const Icon(Icons.chevron_right,
+                  size: 18, color: AppColors.primary),
             ],
           ),
         ),
